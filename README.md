@@ -1,4 +1,4 @@
-# NOF1 Snapshot Documentation
+# NOF1 Documentation with PROMPT
 
 Chinese version 中文版本: [README.zh-CN.md](./README.zh-CN.md)
 
