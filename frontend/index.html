@@ -330,6 +330,7 @@
         errorStateEl.hidden = true;
       } catch (error) {
         console.error("Failed to fetch trades", error);
+        errorStateEl.textContent = `获取交易数据失败：${error.message || error}`;
         statusTextEl.textContent = "错误";
         errorStateEl.hidden = false;
       }

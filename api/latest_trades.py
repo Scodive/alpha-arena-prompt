@@ -16,18 +16,13 @@ from datetime import datetime, timezone
 from http import HTTPStatus
 from typing import Any, Dict, List
 
-try:
-    from werkzeug.wrappers import Request, Response  # type: ignore
-except Exception:  # pragma: no cover - fallback for Vercel worker runtime
-    Request = Dict[str, Any]  # type: ignore
-    Response = Dict[str, Any]  # type: ignore
-
 BASE_URL = os.getenv("NOF1_BASE_URL", "https://nof1.ai/api").rstrip("/")
 DEFAULT_LIMIT = int(os.getenv("TRADE_DISPLAY_LIMIT", "60"))
 
 HEADERS = {
     "Accept": "application/json",
-    "User-Agent": "alpha-arena-vercel/1.0 (+https://vercel.com/)",
+    "User-Agent": "Mozilla/5.0 (compatible; AlphaArenaTicker/1.0; +https://vercel.com/)",
+    "Accept-Language": "en-US,en;q=0.9",
 }
 
 
@@ -101,17 +96,18 @@ def _sort_trades(trades: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return sorted(trades, key=sort_key, reverse=True)
 
 
-def handler(request: Request) -> Response:
-    """Vercel function entrypoint."""
-    limit_param = None
-    if hasattr(request, "args"):
-        limit_param = request.args.get("limit")  # type: ignore[attr-defined]
-    elif isinstance(request, dict):
-        limit_param = (
-            request.get("query", {}).get("limit")
-            or request.get("queryStringParameters", {}).get("limit")
-            or request.get("args", {}).get("limit")
-        )
+def handler(request: Dict[str, Any]) -> Dict[str, Any]:
+    """Vercel function entrypoint (Next.js / Vercel style)."""
+    query = request.get("query", {})
+    if not isinstance(query, dict):
+        query = {}
+    query_string = request.get("queryStringParameters", {})
+    if not isinstance(query_string, dict):
+        query_string = {}
+    args = request.get("args", {})
+    if not isinstance(args, dict):
+        args = {}
+    limit_param = query.get("limit") or query_string.get("limit") or args.get("limit")
     try:
         limit = int(limit_param) if limit_param is not None else DEFAULT_LIMIT
     except (TypeError, ValueError):
@@ -132,21 +128,15 @@ def handler(request: Request) -> Response:
             "count": len(limited),
             "trades": limited,
         }
-        if isinstance(Response, type):  # werkzeug path
-            return Response(
-                json.dumps(response_body),
-                status=HTTPStatus.OK,
-                mimetype="application/json",
-            )
         return {
             "statusCode": HTTPStatus.OK,
             "headers": {"Content-Type": "application/json"},
             "body": json.dumps(response_body),
         }
     except Exception as exc:  # pylint: disable=broad-except
-        error_body = json.dumps({"error": str(exc)})
-        if isinstance(Response, type):
-            return Response(error_body, status=HTTPStatus.BAD_GATEWAY, mimetype="application/json")
+        error_message = f"{exc.__class__.__name__}: {exc}"
+        print(f"[latest_trades] error -> {error_message}", flush=True)
+        error_body = json.dumps({"error": error_message})
         return {
             "statusCode": HTTPStatus.BAD_GATEWAY,
             "headers": {"Content-Type": "application/json"},
