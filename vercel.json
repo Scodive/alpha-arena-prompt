@@ -1,13 +1,20 @@
 {
   "version": 2,
-  "functions": {
-    "api/*.py": {
-      "runtime": "python3.10",
-      "maxDuration": 10
+  "builds": [
+    {
+      "src": "api/latest_trades.py",
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "25mb"
+      }
     }
-  },
+  ],
   "routes": [
-    { "src": "/api/(.*)", "dest": "/api/$1.py" },
-    { "src": "/(.*)", "dest": "/frontend/index.html" }
-  ]
+    { "src": "/api/latest_trades", "dest": "api/latest_trades.py" },
+    { "src": "/(.*)", "dest": "frontend/index.html" }
+  ],
+  "env": {
+    "NOF1_BASE_URL": "https://nof1.ai/api",
+    "TRADE_DISPLAY_LIMIT": "60"
+  }
 }
