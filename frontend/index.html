@@ -147,9 +147,9 @@
       background: #f4f1ea;
     }
 
-    .chart-placeholder {
+    .chart-area {
       flex: 1;
-      padding: 1.5rem 1.2rem;
+      padding: 1.5rem 1.2rem 1.8rem;
       background: repeating-linear-gradient(
           90deg,
           rgba(20, 17, 15, 0.08),
@@ -164,6 +164,18 @@
           transparent 1px,
           transparent 32px
         );
+      position: relative;
+      border-top: 1px solid rgba(20, 17, 15, 0.14);
+    }
+
+    .chart-area canvas {
+      width: 100% !important;
+      height: 320px !important;
+    }
+
+    .chart-empty {
+      position: absolute;
+      inset: 0;
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -172,16 +184,8 @@
       text-align: center;
       color: #5b554d;
       font-size: 0.92rem;
-    }
-
-    .chart-placeholder .badge {
-      padding: 0.3rem 0.8rem;
-      border-radius: 999px;
-      border: 1px solid #14110f;
-      background: #fff;
-      font-size: 0.78rem;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
+      background: rgba(247, 245, 241, 0.92);
+      backdrop-filter: blur(2px);
     }
 
     .summary-grid {
@@ -221,7 +225,16 @@
     }
 
     .summary-stats span {
-      font-weight: 600;
+      font-weight: 500;
+    }
+
+    .summary-stats span strong {
+      font-weight: 700;
+    }
+
+    .summary-item header .account-value {
+      font-size: 0.95rem;
+      font-weight: 700;
     }
 
     .summary-empty {
@@ -481,9 +494,9 @@
       <section class="dashboard-grid">
         <article class="card">
           <h2>总账户价值趋势</h2>
-          <div class="chart-placeholder">
-            <div class="badge">视觉预留</div>
-            <p>图表数据尚未接入，当前展示最新交易与持仓动态。</p>
+          <div class="chart-area">
+            <canvas id="account-chart"></canvas>
+            <div id="chart-empty" class="chart-empty">暂无账户数据，等待最新快照…</div>
           </div>
         </article>
         <article class="card">
@@ -527,6 +540,7 @@
     </footer>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
     const API_URL = "/api/latest_trades";
     const POLL_INTERVAL = 30_000;
@@ -544,8 +558,11 @@
     const modelSummaryEl = document.getElementById("model-summary");
     const symbolSummaryEl = document.getElementById("symbol-summary");
     const summaryGridEl = document.getElementById("summary-grid");
+    const chartCanvas = document.getElementById("account-chart");
+    const chartEmptyEl = document.getElementById("chart-empty");
 
     let notificationTimer;
+    let accountChart;
 
     const state = {
       trades: [],
@@ -555,6 +572,7 @@
       },
       availableModels: [],
       availableSymbols: [],
+      accounts: [],
       seenEvents: new Set(),
       isInitialized: false,
       lastSummary: {
@@ -642,6 +660,17 @@
         return fixed.toLocaleString(undefined, { maximumFractionDigits: digits });
       }
       return fixed.toFixed(digits);
+    }
+
+    function formatPercent(value) {
+      if (value === null || value === undefined || Number.isNaN(value)) {
+        return "—";
+      }
+      const numeric = Number(value);
+      if (Number.isNaN(numeric)) {
+        return "—";
+      }
+      return `${formatNumber(numeric, 2)}%`;
     }
 
     function createChip(label, value, active, onSelect) {
@@ -783,6 +812,42 @@
       const closed =
         stats.closed ?? state.trades.filter((item) => item.status !== "open").length;
 
+      const accounts = state.accounts || [];
+      let totalEquity = 0;
+      let topAccount = null;
+      accounts.forEach((account) => {
+        const value = Number(account.account_value);
+        if (!Number.isNaN(value)) {
+          totalEquity += value;
+          if (!topAccount || value > (topAccount.account_value ?? -Infinity)) {
+            topAccount = { ...account, account_value: value };
+          }
+        }
+      });
+
+      const totalEquityText =
+        accounts.length > 0 && Number.isFinite(totalEquity)
+          ? currencyFormatter.format(totalEquity)
+          : "—";
+      let topModelText = "—";
+      if (topAccount) {
+        const topValueText =
+          topAccount.account_value !== null && topAccount.account_value !== undefined
+            ? currencyFormatter.format(topAccount.account_value)
+            : "—";
+        const topReturnValue =
+          topAccount.total_return_pct !== null && topAccount.total_return_pct !== undefined
+            ? Number(topAccount.total_return_pct)
+            : null;
+        const topReturnText =
+          topReturnValue !== null && !Number.isNaN(topReturnValue)
+            ? formatPercent(topReturnValue)
+            : "—";
+        topModelText = `${topAccount.model_id} · ${topValueText}${
+          topReturnText !== "—" ? ` (${topReturnText})` : ""
+        }`;
+      }
+
       statsBarEl.innerHTML = `
         <div class="stat-chip">
           <span>总记录</span>
@@ -796,14 +861,23 @@
           <span>已结束</span>
           <div>${closed}</div>
         </div>
+        <div class="stat-chip">
+          <span>资产合计</span>
+          <div>${totalEquityText}</div>
+        </div>
+        <div class="stat-chip">
+          <span>最高账户</span>
+          <div>${topModelText}</div>
+        </div>
       `;
     }
 
-    function buildModelStats(trades) {
+    function buildModelStats(trades, accounts) {
       const map = new Map();
       trades.forEach((trade) => {
         const model = trade.model_id || "未知模型";
-        const entry = map.get(model) || { model, open: 0, closed: 0, pnl: 0 };
+        const entry =
+          map.get(model) || { model, open: 0, closed: 0, pnl: 0, accountValue: null, returnPct: null };
         if (trade.status === "open") {
           entry.open += 1;
         } else {
@@ -817,11 +891,55 @@
         }
         map.set(model, entry);
       });
-      return Array.from(map.values()).sort((a, b) => b.open - a.open || b.closed - a.closed);
+      accounts.forEach((account) => {
+        const model = account.model_id || "未知模型";
+        const entry =
+          map.get(model) || { model, open: 0, closed: 0, pnl: 0, accountValue: null, returnPct: null };
+        const value = Number(account.account_value);
+        if (!Number.isNaN(value)) {
+          entry.accountValue = value;
+        }
+        const returnPctRaw = Number(account.total_return_pct);
+        if (!Number.isNaN(returnPctRaw)) {
+          const normalizedPct = Math.abs(returnPctRaw) <= 1 ? returnPctRaw * 100 : returnPctRaw;
+          entry.returnPct = normalizedPct;
+        }
+        const unrealized = Number(account.total_unrealized_pnl);
+        if (!Number.isNaN(unrealized)) {
+          entry.pnl += unrealized;
+        }
+        map.set(model, entry);
+      });
+
+      return Array.from(map.values()).sort((a, b) => {
+        const aValue = a.accountValue;
+        const bValue = b.accountValue;
+        if (aValue !== undefined || bValue !== undefined) {
+          const safeA = aValue !== null && aValue !== undefined ? aValue : -Number.MAX_VALUE;
+          const safeB = bValue !== null && bValue !== undefined ? bValue : -Number.MAX_VALUE;
+          if (safeA !== safeB) {
+            return safeB - safeA;
+          }
+        }
+        const aReturn = a.returnPct;
+        const bReturn = b.returnPct;
+        if (aReturn !== undefined || bReturn !== undefined) {
+          const safeA = aReturn !== null && aReturn !== undefined ? aReturn : -Number.MAX_VALUE;
+          const safeB = bReturn !== null && bReturn !== undefined ? bReturn : -Number.MAX_VALUE;
+          if (safeA !== safeB) {
+            return safeB - safeA;
+          }
+        }
+        const pnlDiff = (b.pnl ?? 0) - (a.pnl ?? 0);
+        if (Math.abs(pnlDiff) > 1e-9) {
+          return pnlDiff;
+        }
+        return b.open - a.open || b.closed - a.closed;
+      });
     }
 
     function renderSummary() {
-      const stats = buildModelStats(state.trades);
+      const stats = buildModelStats(state.trades, state.accounts);
       summaryGridEl.innerHTML = "";
       if (!stats.length) {
         summaryGridEl.innerHTML =
@@ -831,21 +949,123 @@
 
       stats.slice(0, 6).forEach((item) => {
         const color = colorForModel(item.model);
-        const pnlClass = item.pnl >= 0 ? "pnl-positive" : "pnl-negative";
-        const pnlText = currencyFormatter.format(item.pnl);
+        const accountValueText =
+          item.accountValue !== null && item.accountValue !== undefined
+            ? currencyFormatter.format(item.accountValue)
+            : "—";
+        const returnValue =
+          item.returnPct !== null && item.returnPct !== undefined
+            ? Number(item.returnPct)
+            : null;
+        const hasReturn = returnValue !== null && !Number.isNaN(returnValue);
+        const returnClass = hasReturn
+          ? returnValue >= 0
+            ? "pnl-positive"
+            : "pnl-negative"
+          : "";
+        const returnText = hasReturn ? formatPercent(returnValue) : "—";
+        const pnlValue = Number(item.pnl);
+        const pnlClass =
+          Number.isNaN(pnlValue) || pnlValue === 0
+            ? ""
+            : pnlValue >= 0
+            ? "pnl-positive"
+            : "pnl-negative";
+        const pnlText = Number.isNaN(pnlValue) ? "—" : currencyFormatter.format(pnlValue);
+
         summaryGridEl.innerHTML += `
           <article class="summary-item" style="border-color:${color}">
             <header>
               <strong>${item.model}</strong>
-              <span class="${pnlClass}">${pnlText}</span>
+              <span class="account-value">${accountValueText}</span>
             </header>
             <div class="summary-stats">
-              <span>进行中：${item.open}</span>
-              <span>已结束：${item.closed}</span>
+              <span>收益率：<strong class="${returnClass}">${returnText}</strong></span>
+              <span>累计盈亏：<strong class="${pnlClass}">${pnlText}</strong></span>
+              <span>进行中：<strong>${item.open}</strong></span>
+              <span>已结束：<strong>${item.closed}</strong></span>
             </div>
           </article>
         `;
       });
+    }
+
+    function updateChart(accounts) {
+      if (!window.Chart || !chartCanvas) {
+        return;
+      }
+
+      const context = chartCanvas.getContext("2d");
+      const sorted = [...(accounts || [])]
+        .filter((account) => Number.isFinite(Number(account.account_value)))
+        .sort((a, b) => Number(b.account_value) - Number(a.account_value))
+        .slice(0, 10);
+
+      if (chartEmptyEl) {
+        chartEmptyEl.hidden = sorted.length > 0;
+      }
+
+      if (!sorted.length) {
+        if (accountChart) {
+          accountChart.destroy();
+          accountChart = null;
+        }
+        return;
+      }
+
+      const labels = sorted.map((account) => account.model_id || "未知模型");
+      const data = sorted.map((account) => Number(account.account_value));
+      const backgrounds = labels.map((label) => colorForModel(label));
+
+      if (!accountChart) {
+        accountChart = new Chart(context, {
+          type: "bar",
+          data: {
+            labels,
+            datasets: [
+              {
+                label: "账户资产（USD）",
+                data,
+                backgroundColor: backgrounds,
+                borderColor: "#14110f",
+                borderWidth: 1.2,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) =>
+                    `${ctx.dataset.label}: ${currencyFormatter.format(ctx.parsed.y)}`,
+                },
+              },
+            },
+            scales: {
+              x: {
+                ticks: {
+                  font: { weight: "600" },
+                },
+                grid: { display: false },
+              },
+              y: {
+                ticks: {
+                  callback: (value) => currencyFormatter.format(value),
+                },
+                grid: { color: "rgba(20,17,15,0.1)" },
+              },
+            },
+          },
+        });
+      } else {
+        accountChart.data.labels = labels;
+        accountChart.data.datasets[0].data = data;
+        accountChart.data.datasets[0].backgroundColor = backgrounds;
+        accountChart.update();
+      }
     }
 
     function renderTrades() {
@@ -957,7 +1177,9 @@
 
         const data = await response.json();
         const trades = Array.isArray(data.trades) ? data.trades : [];
+        const accounts = Array.isArray(data.accounts) ? data.accounts : [];
         state.trades = trades;
+        state.accounts = accounts;
         state.availableModels = Array.isArray(data.models) ? data.models : [];
         state.availableSymbols = Array.isArray(data.symbols) ? data.symbols : [];
         const totalCount = Number(data.count);
@@ -976,6 +1198,7 @@
         processNotifications(trades);
         renderStatsBar();
         renderSummary();
+        updateChart(state.accounts);
         updateFilters();
         renderTrades();
         lastUpdatedEl.textContent = formatTime(data.fetched_at) || data.fetched_at || "—";
@@ -999,6 +1222,7 @@
     renderSummary();
     updateFilters();
     renderTrades();
+    updateChart(state.accounts);
 
     fetchTrades();
     setInterval(fetchTrades, POLL_INTERVAL);

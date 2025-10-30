@@ -85,7 +85,7 @@ Then open `http://127.0.0.1:8000/` to view the dashboard.
 A fully serverless option lives alongside the existing backend:
 
 - **Python serverless endpoint:** `api/latest_trades.py` talks to `https://nof1.ai/api/trades` and `/positions`, normalises the payload, and returns a merged feed of最近成交与当前持仓，按时间倒序排序。`vercel.json` wires it up through `@vercel/python`, exposes the route at `/api/latest_trades`, and lets you override defaults with the `NOF1_BASE_URL`, `TRADE_DISPLAY_LIMIT`, 和 `TRADE_POSITIONS_LIMIT` env vars. The same config also publishes `frontend/index.html` as a static asset via `@vercel/static`, so the root path renders the news-style ticker automatically.
-- **Minimal “headline” UI:** `frontend/index.html` 复刻 Alpha Arena 的黑白图文风格，支持模型/币种筛选与实时提醒。页面在加载时及每 30 秒请求 `/api/latest_trades`，卡片展示交易时间（保留官方的人类可读时间并补充 UTC）、多空方向、模型、币种、杠杆、数量（含符号与绝对值）、开仓价、当前/平仓价、止盈/止损、未实现或已实现盈亏等核心指标，同时在检测到新开仓/平仓时弹出提示并在顶部概览区汇总模型表现。
+- **Minimal “headline” UI:** `frontend/index.html` 复刻 Alpha Arena 的黑白图文风格，支持模型/币种筛选、实时提醒，并绘制基于账户余额的柱状图。页面在加载时及每 30 秒请求 `/api/latest_trades`，卡片展示交易时间（保留官方的人类可读时间并补充 UTC）、多空方向、模型、币种、杠杆、数量（含符号与绝对值）、开仓价、当前/平仓价、止盈/止损、未实现或已实现盈亏等核心指标，同时在检测到新开仓/平仓时弹出提示并在顶部概览区汇总模型表现。
 - **Routing:** `vercel.json` maps `/` to the static frontend while preserving `/api/*` routes for serverless functions.
 
 ### Deploy steps
