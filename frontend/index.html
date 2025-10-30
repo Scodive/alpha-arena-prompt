@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Alpha Arena 实时交易播报</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: "Inter", "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+      background-color: #0b1016;
+      color: #e7ecf4;
+    }
+
+    body {
+      margin: 0;
+      padding: 2.5rem 1rem 4rem;
+      display: flex;
+      justify-content: center;
+      background: radial-gradient(120% 90% at 50% 0%, rgba(34, 84, 180, 0.24), rgba(12, 17, 25, 0.96) 65%);
+    }
+
+    main {
+      width: min(900px, 100%);
+      display: flex;
+      flex-direction: column;
+      gap: 1.6rem;
+    }
+
+    header {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: clamp(1.5rem, 2.3vw + 1rem, 2.4rem);
+      letter-spacing: 0.08rem;
+      font-weight: 600;
+    }
+
+    header p {
+      margin: 0;
+      color: #8695ab;
+      font-size: 0.95rem;
+    }
+
+    .status-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      font-size: 0.85rem;
+      color: #97a5ba;
+    }
+
+    .status-chip {
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .status-chip strong {
+      font-weight: 600;
+      color: #d6deea;
+    }
+
+    .feed {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .trade-card {
+      padding: 1.15rem 1.3rem 1.1rem;
+      border-radius: 14px;
+      background: rgba(15, 21, 30, 0.84);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      box-shadow: 0 14px 30px rgba(5, 10, 20, 0.35);
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .trade-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 0.6rem;
+    }
+
+    .trade-time {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #9fb3c9;
+      letter-spacing: 0.05rem;
+    }
+
+    .trade-side {
+      padding: 0.15rem 0.7rem;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      letter-spacing: 0.08rem;
+      text-transform: uppercase;
+      border: 1px solid transparent;
+    }
+
+    .trade-side.long {
+      color: #8bd9ff;
+      border-color: rgba(139, 217, 255, 0.35);
+      background: rgba(139, 217, 255, 0.08);
+    }
+
+    .trade-side.short {
+      color: #ffaba8;
+      border-color: rgba(255, 171, 168, 0.35);
+      background: rgba(255, 171, 168, 0.08);
+    }
+
+    .trade-headline {
+      font-size: 1.05rem;
+      letter-spacing: 0.04rem;
+      color: #f3f6fa;
+    }
+
+    .trade-meta {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 0.75rem;
+      font-size: 0.88rem;
+    }
+
+    .metric {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+      color: #8d9ab0;
+    }
+
+    .metric span {
+      font-size: 0.75rem;
+      letter-spacing: 0.08rem;
+      text-transform: uppercase;
+      color: #738197;
+    }
+
+    .metric strong {
+      font-weight: 600;
+      color: #dce4f1;
+    }
+
+    .empty-state,
+    .error-state {
+      text-align: center;
+      padding: 2.5rem 1rem;
+      border-radius: 16px;
+      border: 1px dashed rgba(255, 255, 255, 0.08);
+      background: rgba(12, 18, 26, 0.7);
+      color: #92a2bb;
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    footer {
+      margin-top: 1rem;
+      font-size: 0.8rem;
+      color: #5f6b80;
+      text-align: right;
+    }
+
+    @media (max-width: 640px) {
+      body {
+        padding: 1.8rem 0.8rem 3rem;
+      }
+
+      .trade-card {
+        padding: 1rem 1rem 0.9rem;
+      }
+
+      .trade-headline {
+        font-size: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Alpha Arena 实时交易播报</h1>
+      <p>最新交易快讯，按时间倒序自动更新，适配 Vercel 部署。</p>
+      <div class="status-bar">
+        <div class="status-chip">
+          <span>最后更新</span>
+          <strong id="last-updated">—</strong>
+        </div>
+        <div class="status-chip">
+          <span>刷新间隔</span>
+          <strong>30 秒</strong>
+        </div>
+        <div class="status-chip">
+          <span>状态</span>
+          <strong id="status-text">准备中…</strong>
+        </div>
+      </div>
+    </header>
+
+    <section id="feed" class="feed" aria-live="polite"></section>
+    <div id="empty-state" class="empty-state" hidden>暂无交易数据，请稍候…</div>
+    <div id="error-state" class="error-state" hidden>获取交易数据失败，请稍后重试。</div>
+
+    <footer>数据来源于 NOF1 公共 API · 页面每 30 秒自动刷新</footer>
+  </main>
+
+  <script>
+    const API_URL = "/api/latest_trades";
+    const POLL_INTERVAL = 30_000;
+
+    const feedEl = document.getElementById("feed");
+    const emptyStateEl = document.getElementById("empty-state");
+    const errorStateEl = document.getElementById("error-state");
+    const lastUpdatedEl = document.getElementById("last-updated");
+    const statusTextEl = document.getElementById("status-text");
+
+    const timeFormatter = new Intl.DateTimeFormat(undefined, {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+
+    const dateFormatter = new Intl.DateTimeFormat(undefined, {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+
+    function formatTime(value) {
+      if (!value) {
+        return "未知时间";
+      }
+      const date = new Date(value);
+      if (Number.isNaN(date)) {
+        return value;
+      }
+      return `${timeFormatter.format(date)} · ${dateFormatter.format(date)}`;
+    }
+
+    function formatNumber(value, digits = 2) {
+      if (value === null || value === undefined || Number.isNaN(value)) {
+        return "—";
+      }
+      const fixed = Number(value);
+      if (Math.abs(fixed) >= 1000) {
+        return fixed.toLocaleString(undefined, { maximumFractionDigits: digits });
+      }
+      return fixed.toFixed(digits);
+    }
+
+    function renderTrades(trades) {
+      feedEl.innerHTML = "";
+      if (!trades || trades.length === 0) {
+        feedEl.hidden = true;
+        emptyStateEl.hidden = false;
+        return;
+      }
+
+      feedEl.hidden = false;
+      emptyStateEl.hidden = true;
+
+      trades.forEach((trade) => {
+        const direction = (trade.side || "").toLowerCase();
+        const sideLabel = direction === "long" ? "多" : direction === "short" ? "空" : "—";
+        const card = document.createElement("article");
+        card.className = `trade-card`;
+        card.innerHTML = `
+          <div class="trade-header">
+            <span class="trade-time">${formatTime(trade.display_time)}</span>
+            <span class="trade-side ${direction}">${sideLabel}</span>
+          </div>
+          <div class="trade-headline">${trade.symbol ?? "未知品种"} · ${trade.model_id ?? "未知模型"}</div>
+          <div class="trade-meta">
+            <div class="metric">
+              <span>杠杆</span>
+              <strong>${trade.leverage ? formatNumber(trade.leverage, 1) + "x" : trade.raw_leverage || "—"}</strong>
+            </div>
+            <div class="metric">
+              <span>数量</span>
+              <strong>${formatNumber(trade.quantity, 3)}</strong>
+            </div>
+            <div class="metric">
+              <span>开仓价格</span>
+              <strong>${formatNumber(trade.entry_price, 4)}</strong>
+            </div>
+            <div class="metric">
+              <span>止盈价格</span>
+              <strong>${formatNumber(trade.profit_target ?? trade.exit_price, 4)}</strong>
+            </div>
+            <div class="metric">
+              <span>止损</span>
+              <strong>${formatNumber(trade.stop_loss, 4)}</strong>
+            </div>
+            <div class="metric">
+              <span>浮动盈亏</span>
+              <strong>${formatNumber(trade.realized_net_pnl, 2)}</strong>
+            </div>
+          </div>
+        `;
+        feedEl.appendChild(card);
+      });
+    }
+
+    async function fetchTrades() {
+      statusTextEl.textContent = "更新中…";
+      try {
+        const response = await fetch(API_URL);
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        const data = await response.json();
+        renderTrades(data.trades);
+        lastUpdatedEl.textContent = formatTime(data.fetched_at);
+        statusTextEl.textContent = `最新 ${data.count} 条`;
+        errorStateEl.hidden = true;
+      } catch (error) {
+        console.error("Failed to fetch trades", error);
+        statusTextEl.textContent = "错误";
+        errorStateEl.hidden = false;
+      }
+    }
+
+    fetchTrades();
+    setInterval(fetchTrades, POLL_INTERVAL);
+  </script>
+</body>
+</html>

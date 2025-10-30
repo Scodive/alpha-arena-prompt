@@ -57,6 +57,30 @@ snapshots/
           trades.json
 ```
 
+## 实时交易监控面板
+`backend/` 与 `frontend/` 目录提供了一个轻量 Web 服务，会按分钟轮询 NOF1 `/trades` 接口，并在浏览器中高亮最新成交。
+
+### 启动步骤
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r backend/requirements.txt
+uvicorn backend.app:app --reload
+```
+
+打开 `http://127.0.0.1:8000/` 即可查看看板。
+
+### 功能说明
+- 后台线程默认每 60 秒请求 `https://nof1.ai/api/trades`（可通过 `TRADE_POLL_INTERVAL_SECONDS` 调整）。
+- 追踪最近成交 ID，识别并高亮自上次轮询以来出现的新成交。
+- 暴露 `GET /api/trades/latest` 获取最新快照，`POST /api/trades/poll` 用于手动触发轮询。
+- 直接托管前端页面 (`frontend/index.html`)，无需额外部署即可浏览最新交易。
+
+### 可配置项
+- `NOF1_BASE_URL`：覆盖上游 API 基地址（默认 `https://nof1.ai/api`）。
+- `TRADE_POLL_INTERVAL_SECONDS`：轮询间隔（秒），最小值 10，默认 60。
+- `TRADE_CACHE_LIMIT`：返回给前端的最近成交数量，默认 50。
+
 ## 更新文档
 - 将后续快照导出放入 `snapshots/<timestamp>/`。
 - 重新运行分析脚本或进行人工检查，并在这些 Markdown 文件中追加差异（建议加日期小节）。

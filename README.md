@@ -57,6 +57,44 @@ snapshots/
           trades.json
 ```
 
+## Real-time trade monitor
+The `backend/` and `frontend/` folders provide a lightweight web service that polls the NOF1 `/trades` endpoint every minute and surfaces newly detected fills in a browser.
+
+### Running the service
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r backend/requirements.txt
+uvicorn backend.app:app --reload
+```
+
+Then open `http://127.0.0.1:8000/` to view the dashboard.
+
+### What it does
+- Polls `https://nof1.ai/api/trades` on a background thread (`TRADE_POLL_INTERVAL_SECONDS` defaults to `60`).
+- Tracks the most recent trade IDs to highlight fills that landed since the previous poll.
+- Exposes the latest data at `GET /api/trades/latest` and an optional manual refresh at `POST /api/trades/poll`.
+- Serves the front-end dashboard (`frontend/index.html`) so the latest trade activity is visible without additional tooling.
+
+### Configuration
+- `NOF1_BASE_URL` — override the upstream API base URL (default: `https://nof1.ai/api`).
+- `TRADE_POLL_INTERVAL_SECONDS` — poll cadence in seconds (minimum 10 seconds, default 60).
+- `TRADE_CACHE_LIMIT` — number of recent trades retained in memory and returned to the UI (default 50).
+
+## Deploying a 30-second ticker on Vercel
+A fully serverless option lives alongside the existing backend:
+
+- **Python serverless endpoint:** `api/latest_trades.py` talks to `https://nof1.ai/api/trades`, normalises the payload, and returns a trimmed list of trades sorted by timestamp. The handler runs on Vercel’s Python 3.11 runtime (see `vercel.json`) and supports an optional `?limit=` query override.
+- **Minimal “headline” UI:** `frontend/index.html` renders the newest fills in a news-feed style layout. It calls `/api/latest_trades` immediately on load and every 30 seconds afterwards. Each card displays：交易时间、空/多方向、模型、币种、杠杆、数量、开仓价、止盈/止损以及已实现盈亏。
+- **Routing:** `vercel.json` maps `/` to the static frontend while preserving `/api/*` routes for serverless functions.
+
+### Deploy steps
+1. Install the Vercel CLI (`npm i -g vercel`) and log in with `vercel login`.
+2. From the repository root run `vercel --prod` (or `vercel` for a preview). The CLI respects `vercel.json`, so no extra build configuration is necessary.
+3. Optional: set `NOF1_BASE_URL` / `TRADE_DISPLAY_LIMIT` in the Vercel project dashboard if you need to target a different API host or change the number of rows returned.
+
+Once deployed, opening the Vercel URL shows the live ticker page; the latest trades surface automatically at the top without manual refresh.
+
 ## Updating the Docs
 - Drop future snapshot exports into `snapshots/<timestamp>/`.
 - Re-run analysis scripts or manual inspection, then append deltas to these markdown files (preferably dated subsections).
