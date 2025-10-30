@@ -10,8 +10,8 @@
     }
   ],
   "routes": [
-    { "src": "/api/latest_trades", "dest": "api/latest_trades.py" },
-    { "src": "/(.*)", "dest": "frontend/index.html" }
+    { "src": "/api/latest_trades", "dest": "/api/latest_trades.py" },
+    { "src": "/(.*)", "dest": "/frontend/index.html" }
   ],
   "env": {
     "NOF1_BASE_URL": "https://nof1.ai/api",
