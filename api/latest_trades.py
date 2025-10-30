@@ -14,7 +14,9 @@ import urllib.error
 import urllib.request
 from datetime import datetime, timezone
 from http import HTTPStatus
+from http.server import BaseHTTPRequestHandler
 from typing import Any, Dict, List
+from urllib.parse import parse_qs, urlparse
 
 BASE_URL = os.getenv("NOF1_BASE_URL", "https://nof1.ai/api").rstrip("/")
 DEFAULT_LIMIT = int(os.getenv("TRADE_DISPLAY_LIMIT", "60"))
@@ -96,49 +98,58 @@ def _sort_trades(trades: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return sorted(trades, key=sort_key, reverse=True)
 
 
-def handler(request: Dict[str, Any]) -> Dict[str, Any]:
-    """Vercel function entrypoint (Next.js / Vercel style)."""
-    query = request.get("query", {})
-    if not isinstance(query, dict):
-        query = {}
-    query_string = request.get("queryStringParameters", {})
-    if not isinstance(query_string, dict):
-        query_string = {}
-    args = request.get("args", {})
-    if not isinstance(args, dict):
-        args = {}
-    limit_param = query.get("limit") or query_string.get("limit") or args.get("limit")
-    try:
-        limit = int(limit_param) if limit_param is not None else DEFAULT_LIMIT
-    except (TypeError, ValueError):
-        limit = DEFAULT_LIMIT
+class handler(BaseHTTPRequestHandler):
+    """Vercel Python serverless handler implemented via BaseHTTPRequestHandler."""
 
-    try:
-        payload = _fetch_json("/trades")
-        trades_raw = payload.get("trades")
-        if not isinstance(trades_raw, list):
-            raise RuntimeError("Unexpected response shape from /trades")
-        normalised = [_normalize_trade(tr) for tr in trades_raw]
-        filtered = [tr for tr in normalised if tr["id"]]
-        sorted_trades = _sort_trades(filtered)
-        limited = sorted_trades[: max(limit, 1)]
-        response_body = {
-            "fetched_at": _utc_now(),
-            "limit": limit,
-            "count": len(limited),
-            "trades": limited,
-        }
-        return {
-            "statusCode": HTTPStatus.OK,
-            "headers": {"Content-Type": "application/json"},
-            "body": json.dumps(response_body),
-        }
-    except Exception as exc:  # pylint: disable=broad-except
-        error_message = f"{exc.__class__.__name__}: {exc}"
-        print(f"[latest_trades] error -> {error_message}", flush=True)
-        error_body = json.dumps({"error": error_message})
-        return {
-            "statusCode": HTTPStatus.BAD_GATEWAY,
-            "headers": {"Content-Type": "application/json"},
-            "body": error_body,
-        }
+    server_version = "AlphaArenaLatestTrades/1.0"
+
+    def do_OPTIONS(self) -> None:  # noqa: N802
+        self._send_response(HTTPStatus.NO_CONTENT, b"")
+
+    def do_GET(self) -> None:  # noqa: N802
+        parsed = urlparse(self.path or "")
+        query_params = parse_qs(parsed.query or "")
+        limit_param = query_params.get("limit", [None])[0]
+
+        try:
+            limit = int(limit_param) if limit_param is not None else DEFAULT_LIMIT
+        except (TypeError, ValueError):
+            limit = DEFAULT_LIMIT
+
+        try:
+            payload = _fetch_json("/trades")
+            trades_raw = payload.get("trades")
+            if not isinstance(trades_raw, list):
+                raise RuntimeError("Unexpected response shape from /trades")
+            normalised = [_normalize_trade(tr) for tr in trades_raw]
+            filtered = [tr for tr in normalised if tr["id"]]
+            sorted_trades = _sort_trades(filtered)
+            limited = sorted_trades[: max(limit, 1)]
+            response_body = {
+                "fetched_at": _utc_now(),
+                "limit": limit,
+                "count": len(limited),
+                "trades": limited,
+            }
+            body_bytes = json.dumps(response_body).encode("utf-8")
+            self._send_response(HTTPStatus.OK, body_bytes)
+        except Exception as exc:  # pylint: disable=broad-except
+            error_message = f"{exc.__class__.__name__}: {exc}"
+            print(f"[latest_trades] error -> {error_message}", flush=True)
+            body_bytes = json.dumps({"error": error_message}).encode("utf-8")
+            self._send_response(HTTPStatus.BAD_GATEWAY, body_bytes)
+
+    def log_message(self, fmt: str, *args: object) -> None:  # noqa: D401, ANN001
+        """Silence the default logging (Vercel already captures stdout)."""
+        return
+
+    def _send_response(self, status: HTTPStatus, body: bytes) -> None:
+        self.send_response(status.value)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Cache-Control", "no-store, max-age=0")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        self.end_headers()
+        if body:
+            self.wfile.write(body)
