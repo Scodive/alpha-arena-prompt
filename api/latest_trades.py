@@ -16,6 +16,12 @@ from datetime import datetime, timezone
 from http import HTTPStatus
 from typing import Any, Dict, List
 
+try:
+    from werkzeug.wrappers import Request, Response  # type: ignore
+except Exception:  # pragma: no cover - fallback for Vercel worker runtime
+    Request = Dict[str, Any]  # type: ignore
+    Response = Dict[str, Any]  # type: ignore
+
 BASE_URL = os.getenv("NOF1_BASE_URL", "https://nof1.ai/api").rstrip("/")
 DEFAULT_LIMIT = int(os.getenv("TRADE_DISPLAY_LIMIT", "60"))
 
@@ -95,10 +101,12 @@ def _sort_trades(trades: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return sorted(trades, key=sort_key, reverse=True)
 
 
-def handler(request: Dict[str, Any]) -> Dict[str, Any]:
+def handler(request: Request) -> Response:
     """Vercel function entrypoint."""
     limit_param = None
-    if isinstance(request, dict):
+    if hasattr(request, "args"):
+        limit_param = request.args.get("limit")  # type: ignore[attr-defined]
+    elif isinstance(request, dict):
         limit_param = (
             request.get("query", {}).get("limit")
             or request.get("queryStringParameters", {}).get("limit")
@@ -124,14 +132,23 @@ def handler(request: Dict[str, Any]) -> Dict[str, Any]:
             "count": len(limited),
             "trades": limited,
         }
+        if isinstance(Response, type):  # werkzeug path
+            return Response(
+                json.dumps(response_body),
+                status=HTTPStatus.OK,
+                mimetype="application/json",
+            )
         return {
             "statusCode": HTTPStatus.OK,
             "headers": {"Content-Type": "application/json"},
             "body": json.dumps(response_body),
         }
     except Exception as exc:  # pylint: disable=broad-except
+        error_body = json.dumps({"error": str(exc)})
+        if isinstance(Response, type):
+            return Response(error_body, status=HTTPStatus.BAD_GATEWAY, mimetype="application/json")
         return {
             "statusCode": HTTPStatus.BAD_GATEWAY,
             "headers": {"Content-Type": "application/json"},
-            "body": json.dumps({"error": str(exc)}),
+            "body": error_body,
         }
