@@ -209,13 +209,23 @@ class handler(BaseHTTPRequestHandler):
             sorted_trades = _sort_trades(filtered_trades)
             limited_trades = sorted_trades[: max(limit, 1)]
 
-            positions_payload = _fetch_json(f"/positions?limit={POSITIONS_LIMIT}")
-            positions_raw = positions_payload.get("positions") or positions_payload.get("data") or []
-            if not isinstance(positions_raw, list):
-                raise RuntimeError("Unexpected response shape from /positions")
-            normalised_positions = [
-                _normalize_position(pos) for pos in positions_raw if isinstance(pos, dict)
-            ]
+            normalised_positions: List[Dict[str, Any]] = []
+            try:
+                positions_payload = _fetch_json(f"/positions?limit={POSITIONS_LIMIT}")
+                positions_raw = (
+                    positions_payload.get("positions")
+                    or positions_payload.get("data")
+                    or positions_payload
+                )
+                if isinstance(positions_raw, list):
+                    normalised_positions = [
+                        _normalize_position(pos) for pos in positions_raw if isinstance(pos, dict)
+                    ]
+                else:
+                    raise RuntimeError("Unexpected response shape from /positions")
+            except Exception as exc:  # pylint: disable=broad-except
+                print(f"[latest_trades] positions fetch failed -> {exc}", flush=True)
+                normalised_positions = []
 
             combined = limited_trades + normalised_positions
             combined_sorted = _sort_trades(combined)
