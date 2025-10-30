@@ -193,6 +193,31 @@
       letter-spacing: 0.05rem;
     }
 
+    .trade-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.2rem 0.7rem;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.08rem;
+      text-transform: uppercase;
+      border: 1px solid transparent;
+    }
+
+    .trade-status.open {
+      color: #155a35;
+      background: rgba(31, 184, 120, 0.12);
+      border-color: rgba(31, 184, 120, 0.4);
+    }
+
+    .trade-status.closed {
+      color: #5d6791;
+      background: rgba(152, 165, 213, 0.12);
+      border-color: rgba(152, 165, 213, 0.35);
+    }
+
     .trade-side {
       padding: 0.22rem 0.85rem;
       border-radius: 999px;
@@ -340,7 +365,7 @@
 
     <footer>
       数据来源于 NOF1 公共 API · 页面每 30 秒自动刷新
-      <span>数量以绝对值显示，方向以多/空标识呈现。</span>
+      <span>进行中条目展示未实现盈亏，已结束条目展示已实现盈亏；数量同时保留符号与绝对值。</span>
     </footer>
   </main>
 
@@ -359,13 +384,15 @@
     const modelSummaryEl = document.getElementById("model-summary");
     const symbolSummaryEl = document.getElementById("symbol-summary");
 
-    const state = {
-      trades: [],
-      filters: {
-        model: "all",
-        symbol: "all",
-      },
-    };
+const state = {
+  trades: [],
+  filters: {
+    model: "all",
+    symbol: "all",
+  },
+  availableModels: [],
+  availableSymbols: [],
+};
 
     const timeFormatter = new Intl.DateTimeFormat(undefined, {
       hour: "2-digit",
@@ -382,16 +409,25 @@
       second: "2-digit",
     });
 
-    function formatTime(value) {
-      if (!value) {
-        return "未知时间";
-      }
-      const date = new Date(value);
-      if (Number.isNaN(date.getTime())) {
-        return value;
-      }
-      return `${timeFormatter.format(date)} · ${dateFormatter.format(date)}`;
-    }
+function formatTime(value) {
+  if (!value) {
+    return null;
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  return `${timeFormatter.format(date)} · ${dateFormatter.format(date)}`;
+}
+
+function renderTime(trade) {
+  const human = trade.entry_human_time || trade.exit_human_time;
+  const iso = formatTime(trade.display_time);
+  if (human && iso) {
+    return `${human}（${iso}）`;
+  }
+  return human || iso || "未知时间";
+}
 
     function formatNumber(value, digits = 2) {
       if (value === null || value === undefined || Number.isNaN(value)) {
@@ -425,13 +461,15 @@
       });
     }
 
-    function updateFilters() {
-      const models = Array.from(
-        new Set(state.trades.map((trade) => trade.model_id).filter(Boolean))
-      ).sort();
-      const symbols = Array.from(
-        new Set(state.trades.map((trade) => trade.symbol).filter(Boolean))
-      ).sort();
+function updateFilters() {
+  const models =
+    state.availableModels.length > 0
+      ? state.availableModels
+      : Array.from(new Set(state.trades.map((trade) => trade.model_id).filter(Boolean))).sort();
+  const symbols =
+    state.availableSymbols.length > 0
+      ? state.availableSymbols
+      : Array.from(new Set(state.trades.map((trade) => trade.symbol).filter(Boolean))).sort();
 
       renderFilterChips(modelFiltersEl, models, state.filters.model, (value) => {
         state.filters.model = value;
@@ -472,6 +510,7 @@
 
     function renderTrades() {
       const filtered = applyFilters(state.trades);
+      const openFiltered = filtered.filter((item) => item.status === "open").length;
       feedEl.innerHTML = "";
 
       if (filtered.length === 0) {
@@ -491,20 +530,28 @@
           typeof trade.leverage === "number"
             ? `${formatNumber(trade.leverage, 2)}x`
             : trade.raw_leverage || "—";
-        const quantityValue =
+        const quantitySigned =
           trade.quantity === null || trade.quantity === undefined
             ? null
-            : Math.abs(Number(trade.quantity));
-        const pnlValue =
-          trade.realized_net_pnl === null || trade.realized_net_pnl === undefined
-            ? null
-            : Number(trade.realized_net_pnl);
+            : Number(trade.quantity);
+        const quantityAbs = quantitySigned === null ? null : Math.abs(quantitySigned);
+        const isOpen = trade.status === "open";
+        const statusLabel = isOpen ? "进行中" : "已结束";
+        const statusClass = isOpen ? "open" : "closed";
+        const priceLabel = isOpen ? "当前价格" : "平仓价格";
+        const priceValue = isOpen ? trade.current_price : trade.exit_price;
+        const pnlLabel = isOpen ? "未实现盈亏" : "已实现净盈亏";
+        const pnlRaw = isOpen ? trade.unrealized_pnl : trade.realized_net_pnl;
+        const pnlValue = pnlRaw === null || pnlRaw === undefined ? null : Number(pnlRaw);
 
         const card = document.createElement("article");
         card.className = "trade-card";
         card.innerHTML = `
           <div class="trade-header">
-            <span class="trade-time">${formatTime(trade.display_time)}</span>
+            <div>
+              <span class="trade-time">${renderTime(trade)}</span>
+              <span class="trade-status ${statusClass}">${statusLabel}</span>
+            </div>
             <span class="trade-side ${direction}">${sideLabel}</span>
           </div>
           <div class="trade-headline">${trade.symbol ?? "未知品种"} · ${trade.model_id ?? "未知模型"}</div>
@@ -514,12 +561,20 @@
               <strong>${leverageDisplay}</strong>
             </div>
             <div class="metric">
-              <span>数量 (绝对值)</span>
-              <strong>${formatNumber(quantityValue, 4)}</strong>
+              <span>数量</span>
+              <strong>${formatNumber(quantitySigned, 4)}</strong>
+            </div>
+            <div class="metric">
+              <span>数量绝对值</span>
+              <strong>${formatNumber(quantityAbs, 4)}</strong>
             </div>
             <div class="metric">
               <span>开仓价格</span>
               <strong>${formatNumber(trade.entry_price, 4)}</strong>
+            </div>
+            <div class="metric">
+              <span>${priceLabel}</span>
+              <strong>${formatNumber(priceValue, 4)}</strong>
             </div>
             <div class="metric">
               <span>止盈价格</span>
@@ -530,7 +585,7 @@
               <strong>${formatNumber(trade.stop_loss, 4)}</strong>
             </div>
             <div class="metric">
-              <span>已实现净盈亏</span>
+              <span>${pnlLabel}</span>
               <strong>${formatNumber(pnlValue, 2)}</strong>
             </div>
           </div>
@@ -538,7 +593,7 @@
         feedEl.appendChild(card);
       });
 
-      statusTextEl.textContent = `筛选后 ${filtered.length} 条`;
+      statusTextEl.textContent = `筛选后 ${filtered.length} 条 · 进行中 ${openFiltered} 条`;
     }
 
     async function fetchTrades() {
@@ -550,9 +605,11 @@
         }
         const data = await response.json();
         state.trades = Array.isArray(data.trades) ? data.trades : [];
+        state.availableModels = Array.isArray(data.models) ? data.models : [];
+        state.availableSymbols = Array.isArray(data.symbols) ? data.symbols : [];
         updateFilters();
         renderTrades();
-        lastUpdatedEl.textContent = formatTime(data.fetched_at);
+        lastUpdatedEl.textContent = formatTime(data.fetched_at) || data.fetched_at || "—";
         errorStateEl.hidden = true;
       } catch (error) {
         console.error("Failed to fetch trades", error);

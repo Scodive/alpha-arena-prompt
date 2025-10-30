@@ -20,6 +20,7 @@ from urllib.parse import parse_qs, urlparse
 
 BASE_URL = os.getenv("NOF1_BASE_URL", "https://nof1.ai/api").rstrip("/")
 DEFAULT_LIMIT = int(os.getenv("TRADE_DISPLAY_LIMIT", "60"))
+POSITIONS_LIMIT = int(os.getenv("TRADE_POSITIONS_LIMIT", "200"))
 
 HEADERS = {
     "Accept": "application/json",
@@ -98,8 +99,10 @@ def _ensure_iso8601(value: Any) -> str | None:
 
 def _normalize_trade(trade: Dict[str, Any]) -> Dict[str, Any]:
     """Extract the fields needed by the frontend and normalise names."""
-    entry_time_raw = trade.get("entry_time") or trade.get("entry_human_time")
-    exit_time_raw = trade.get("exit_time") or trade.get("exit_human_time")
+    entry_time_raw = trade.get("entry_time")
+    entry_label = trade.get("entry_human_time") or entry_time_raw
+    exit_time_raw = trade.get("exit_time")
+    exit_label = trade.get("exit_human_time") or exit_time_raw
     entry_time = _ensure_iso8601(entry_time_raw)
     exit_time = _ensure_iso8601(exit_time_raw)
     leverage = trade.get("leverage")
@@ -117,11 +120,52 @@ def _normalize_trade(trade: Dict[str, Any]) -> Dict[str, Any]:
         "exit_price": _coerce_float(trade.get("exit_price")),
         "profit_target": _coerce_float((trade.get("exit_plan") or {}).get("profit_target")),
         "stop_loss": _coerce_float((trade.get("exit_plan") or {}).get("stop_loss")),
+        "entry_human_time": entry_label,
+        "exit_human_time": exit_label,
         "entry_time": entry_time,
         "exit_time": exit_time,
-        "display_time": entry_time or exit_time,
+        "display_time": exit_time or entry_time,
         "realized_net_pnl": _coerce_float(trade.get("realized_net_pnl")),
+        "unrealized_pnl": None,
         "confidence": _coerce_float(trade.get("confidence")),
+        "current_price": None,
+        "status": "closed" if exit_time else "closed_pending",
+        "event": "trade_closed" if exit_time else "trade_record",
+    }
+
+
+def _normalize_position(position: Dict[str, Any]) -> Dict[str, Any]:
+    """Normalise live positions to align with the trade schema."""
+    entry_time_raw = position.get("entry_time")
+    entry_label = position.get("entry_human_time") or entry_time_raw
+    entry_time = _ensure_iso8601(entry_time_raw)
+    leverage = position.get("leverage")
+    leverage_value = _coerce_float(leverage)
+    exit_plan = position.get("exit_plan") or {}
+
+    return {
+        "id": str(position.get("position_id") or position.get("id") or position.get("symbol") or ""),
+        "model_id": position.get("model_id"),
+        "symbol": position.get("symbol"),
+        "side": position.get("side"),
+        "leverage": leverage_value,
+        "raw_leverage": leverage,
+        "quantity": position.get("quantity"),
+        "entry_price": _coerce_float(position.get("entry_price")),
+        "exit_price": None,
+        "profit_target": _coerce_float(exit_plan.get("profit_target")),
+        "stop_loss": _coerce_float(exit_plan.get("stop_loss")),
+        "entry_human_time": entry_label,
+        "exit_human_time": None,
+        "entry_time": entry_time,
+        "exit_time": None,
+        "display_time": entry_time,
+        "realized_net_pnl": None,
+        "unrealized_pnl": _coerce_float(position.get("unrealized_pnl")),
+        "confidence": _coerce_float(position.get("confidence")),
+        "current_price": _coerce_float(position.get("current_price")),
+        "status": "open",
+        "event": "position_open",
     }
 
 
@@ -160,15 +204,36 @@ class handler(BaseHTTPRequestHandler):
             trades_raw = payload.get("trades")
             if not isinstance(trades_raw, list):
                 raise RuntimeError("Unexpected response shape from /trades")
-            normalised = [_normalize_trade(tr) for tr in trades_raw]
-            filtered = [tr for tr in normalised if tr["id"]]
-            sorted_trades = _sort_trades(filtered)
-            limited = sorted_trades[: max(limit, 1)]
+            normalised_trades = [_normalize_trade(tr) for tr in trades_raw]
+            filtered_trades = [tr for tr in normalised_trades if tr["id"]]
+            sorted_trades = _sort_trades(filtered_trades)
+            limited_trades = sorted_trades[: max(limit, 1)]
+
+            positions_payload = _fetch_json(f"/positions?limit={POSITIONS_LIMIT}")
+            positions_raw = positions_payload.get("positions") or positions_payload.get("data") or []
+            if not isinstance(positions_raw, list):
+                raise RuntimeError("Unexpected response shape from /positions")
+            normalised_positions = [
+                _normalize_position(pos) for pos in positions_raw if isinstance(pos, dict)
+            ]
+
+            combined = limited_trades + normalised_positions
+            combined_sorted = _sort_trades(combined)
+
+            models = sorted({item["model_id"] for item in combined_sorted if item.get("model_id")})
+            symbols = sorted({item["symbol"] for item in combined_sorted if item.get("symbol")})
+            open_count = sum(1 for item in combined_sorted if item.get("status") == "open")
+            closed_count = sum(1 for item in combined_sorted if item.get("status") != "open")
+
             response_body = {
                 "fetched_at": _utc_now(),
                 "limit": limit,
-                "count": len(limited),
-                "trades": limited,
+                "count": len(combined_sorted),
+                "open_count": open_count,
+                "closed_count": closed_count,
+                "trades": combined_sorted,
+                "models": models,
+                "symbols": symbols,
             }
             body_bytes = json.dumps(response_body).encode("utf-8")
             self._send_response(HTTPStatus.OK, body_bytes)
