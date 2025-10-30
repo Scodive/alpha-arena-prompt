@@ -136,7 +136,8 @@ def _normalize_trade(trade: Dict[str, Any]) -> Dict[str, Any]:
 
 def _normalize_position(position: Dict[str, Any]) -> Dict[str, Any]:
     """Normalise live positions to align with the trade schema."""
-    entry_time_raw = position.get("entry_time")
+    timestamp_hint = position.pop("_account_timestamp", None)
+    entry_time_raw = position.get("entry_time") or timestamp_hint
     entry_label = position.get("entry_human_time") or entry_time_raw
     entry_time = _ensure_iso8601(entry_time_raw)
     leverage = position.get("leverage")
@@ -149,6 +150,8 @@ def _normalize_position(position: Dict[str, Any]) -> Dict[str, Any]:
         or position.get("entry_oid")
         or f"{position.get('model_id')}-{position.get('symbol')}-{entry_time or entry_label or ''}"
     )
+
+    display_time = entry_time or _ensure_iso8601(timestamp_hint) or _utc_now()
 
     return {
         "id": str(identifier),
@@ -166,7 +169,7 @@ def _normalize_position(position: Dict[str, Any]) -> Dict[str, Any]:
         "exit_human_time": None,
         "entry_time": entry_time,
         "exit_time": None,
-        "display_time": entry_time,
+        "display_time": display_time,
         "realized_net_pnl": None,
         "unrealized_pnl": _coerce_float(position.get("unrealized_pnl")),
         "confidence": _coerce_float(position.get("confidence")),
@@ -209,12 +212,15 @@ def _extract_positions_from_account_entry(entry: Dict[str, Any]) -> List[Dict[st
     if not isinstance(positions_map, dict):
         return positions
     model_id = entry.get("model_id") or entry.get("modelId") or entry.get("id")
+    timestamp = entry.get("timestamp")
     for symbol, pos in positions_map.items():
         if not isinstance(pos, dict):
             continue
         pos_copy = pos.copy()
         pos_copy.setdefault("symbol", symbol)
         pos_copy.setdefault("model_id", model_id)
+        if timestamp is not None:
+            pos_copy.setdefault("_account_timestamp", timestamp)
         positions.append(_normalize_position(pos_copy))
     return positions
 
