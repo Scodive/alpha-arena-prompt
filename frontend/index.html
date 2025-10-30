@@ -1,49 +1,54 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Alpha Arena 实时交易播报</title>
   <style>
     :root {
-      color-scheme: dark;
-      font-family: "Inter", "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
-      background-color: #0b1016;
-      color: #e7ecf4;
+      color-scheme: light;
+      font-family: "Inter", "HarmonyOS Sans", "PingFang SC", "Microsoft YaHei", system-ui,
+        -apple-system, sans-serif;
+      background-color: #eef2f8;
+      color: #0f1b31;
     }
 
     body {
       margin: 0;
-      padding: 2.5rem 1rem 4rem;
+      padding: 2.6rem 1rem 4rem;
       display: flex;
       justify-content: center;
-      background: radial-gradient(120% 90% at 50% 0%, rgba(34, 84, 180, 0.24), rgba(12, 17, 25, 0.96) 65%);
+      background: radial-gradient(
+        140% 120% at 50% 0%,
+        rgba(102, 153, 255, 0.18),
+        rgba(238, 242, 248, 0.96) 68%
+      );
     }
 
     main {
-      width: min(900px, 100%);
+      width: min(1080px, 100%);
       display: flex;
       flex-direction: column;
-      gap: 1.6rem;
+      gap: 1.8rem;
     }
 
     header {
       display: flex;
       flex-direction: column;
-      gap: 0.4rem;
+      gap: 0.55rem;
     }
 
     header h1 {
       margin: 0;
-      font-size: clamp(1.5rem, 2.3vw + 1rem, 2.4rem);
-      letter-spacing: 0.08rem;
-      font-weight: 600;
+      font-size: clamp(1.6rem, 2.4vw + 1rem, 2.7rem);
+      font-weight: 700;
+      letter-spacing: 0.05rem;
     }
 
     header p {
       margin: 0;
-      color: #8695ab;
-      font-size: 0.95rem;
+      color: #5a6787;
+      font-size: 0.96rem;
     }
 
     .status-bar {
@@ -51,57 +56,145 @@
       flex-wrap: wrap;
       gap: 0.75rem;
       font-size: 0.85rem;
-      color: #97a5ba;
+      color: #5b6a7f;
     }
 
     .status-chip {
-      padding: 0.35rem 0.75rem;
+      padding: 0.36rem 0.85rem;
       border-radius: 999px;
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      display: flex;
+      background: #ffffff;
+      border: 1px solid #dbe4f4;
+      display: inline-flex;
       align-items: center;
-      gap: 0.4rem;
+      gap: 0.45rem;
+      box-shadow: 0 6px 18px rgba(111, 137, 212, 0.12);
     }
 
     .status-chip strong {
       font-weight: 600;
-      color: #d6deea;
+      color: #1f2f47;
+    }
+
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.2rem;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.88);
+      padding: 1rem 1.25rem;
+      border-radius: 16px;
+      border: 1px solid rgba(204, 214, 235, 0.9);
+      box-shadow: 0 14px 32px rgba(41, 72, 159, 0.08);
+    }
+
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+      min-width: 200px;
+    }
+
+    .filter-group > span {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12rem;
+      color: #6c7da0;
+    }
+
+    .filter-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+    }
+
+    .filter-chip {
+      border: 1px solid #ccd5ed;
+      background: #f6f8fc;
+      color: #22324d;
+      padding: 0.36rem 0.9rem;
+      border-radius: 999px;
+      font-size: 0.83rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.16s ease-in-out;
+    }
+
+    .filter-chip:hover {
+      border-color: #5b7ffa;
+      color: #1b2d5a;
+    }
+
+    .filter-chip.active {
+      background: linear-gradient(120deg, #4f7df8, #6dd5f7);
+      border-color: transparent;
+      color: #fff;
+      box-shadow: 0 12px 26px rgba(79, 125, 248, 0.28);
+    }
+
+    .filter-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      margin-left: auto;
+    }
+
+    .filter-actions button {
+      padding: 0.48rem 1.05rem;
+      border-radius: 999px;
+      border: none;
+      background: #ecf2ff;
+      color: #1f3d7a;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.16s ease, color 0.16s ease;
+    }
+
+    .filter-actions button:hover {
+      background: #dce6ff;
+      color: #182b5d;
+    }
+
+    .filter-summary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      font-size: 0.84rem;
+      color: #5a6b87;
     }
 
     .feed {
       display: flex;
       flex-direction: column;
-      gap: 1rem;
+      gap: 1.2rem;
     }
 
     .trade-card {
-      padding: 1.15rem 1.3rem 1.1rem;
-      border-radius: 14px;
-      background: rgba(15, 21, 30, 0.84);
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      box-shadow: 0 14px 30px rgba(5, 10, 20, 0.35);
+      padding: 1.25rem 1.45rem 1.2rem;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.96);
+      border: 1px solid rgba(210, 220, 240, 0.85);
+      box-shadow: 0 18px 52px rgba(61, 92, 167, 0.16);
       display: flex;
       flex-direction: column;
-      gap: 0.75rem;
+      gap: 1rem;
     }
 
     .trade-header {
       display: flex;
       justify-content: space-between;
       align-items: baseline;
-      gap: 0.6rem;
+      gap: 0.8rem;
     }
 
     .trade-time {
       font-size: 0.95rem;
       font-weight: 600;
-      color: #9fb3c9;
+      color: #324467;
       letter-spacing: 0.05rem;
     }
 
     .trade-side {
-      padding: 0.15rem 0.7rem;
+      padding: 0.22rem 0.85rem;
       border-radius: 999px;
       font-size: 0.82rem;
       font-weight: 600;
@@ -111,79 +204,92 @@
     }
 
     .trade-side.long {
-      color: #8bd9ff;
-      border-color: rgba(139, 217, 255, 0.35);
-      background: rgba(139, 217, 255, 0.08);
+      color: #10624b;
+      background: rgba(24, 182, 138, 0.14);
+      border-color: rgba(24, 182, 138, 0.4);
     }
 
     .trade-side.short {
-      color: #ffaba8;
-      border-color: rgba(255, 171, 168, 0.35);
-      background: rgba(255, 171, 168, 0.08);
+      color: #a31f3f;
+      background: rgba(246, 118, 146, 0.16);
+      border-color: rgba(246, 118, 146, 0.42);
     }
 
     .trade-headline {
-      font-size: 1.05rem;
+      font-size: 1.12rem;
       letter-spacing: 0.04rem;
-      color: #f3f6fa;
+      color: #142744;
+      font-weight: 600;
     }
 
     .trade-meta {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: 0.75rem;
-      font-size: 0.88rem;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+      font-size: 0.9rem;
     }
 
     .metric {
       display: flex;
       flex-direction: column;
-      gap: 0.2rem;
-      color: #8d9ab0;
+      gap: 0.25rem;
+      color: #586680;
     }
 
     .metric span {
-      font-size: 0.75rem;
-      letter-spacing: 0.08rem;
+      font-size: 0.72rem;
+      letter-spacing: 0.1rem;
       text-transform: uppercase;
-      color: #738197;
+      color: #8897b4;
     }
 
     .metric strong {
       font-weight: 600;
-      color: #dce4f1;
+      color: #111f35;
     }
 
     .empty-state,
     .error-state {
       text-align: center;
-      padding: 2.5rem 1rem;
-      border-radius: 16px;
-      border: 1px dashed rgba(255, 255, 255, 0.08);
-      background: rgba(12, 18, 26, 0.7);
-      color: #92a2bb;
+      padding: 2.4rem 1.2rem;
+      border-radius: 18px;
+      border: 1px dashed rgba(156, 176, 211, 0.6);
+      background: rgba(255, 255, 255, 0.7);
+      color: #667499;
       font-size: 0.95rem;
       line-height: 1.5;
     }
 
     footer {
-      margin-top: 1rem;
-      font-size: 0.8rem;
-      color: #5f6b80;
+      margin-top: 0.4rem;
+      font-size: 0.78rem;
+      color: #627091;
       text-align: right;
     }
 
-    @media (max-width: 640px) {
+    footer span {
+      display: block;
+      margin-top: 0.2rem;
+      color: #8795b0;
+    }
+
+    @media (max-width: 720px) {
       body {
-        padding: 1.8rem 0.8rem 3rem;
+        padding: 2rem 0.9rem 3rem;
       }
 
-      .trade-card {
-        padding: 1rem 1rem 0.9rem;
+      .filters {
+        flex-direction: column;
+        align-items: stretch;
       }
 
-      .trade-headline {
-        font-size: 1rem;
+      .filter-actions {
+        margin-left: 0;
+        justify-content: flex-start;
+      }
+
+      .trade-meta {
+        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
       }
     }
   </style>
@@ -209,11 +315,33 @@
       </div>
     </header>
 
+    <section class="filters">
+      <div class="filter-group">
+        <span>模型</span>
+        <div class="filter-chips" id="model-filters"></div>
+      </div>
+      <div class="filter-group">
+        <span>币种</span>
+        <div class="filter-chips" id="symbol-filters"></div>
+      </div>
+      <div class="filter-actions">
+        <button id="filter-reset" type="button">重置筛选</button>
+      </div>
+    </section>
+
+    <div class="filter-summary">
+      <span id="model-summary"></span>
+      <span id="symbol-summary"></span>
+    </div>
+
     <section id="feed" class="feed" aria-live="polite"></section>
     <div id="empty-state" class="empty-state" hidden>暂无交易数据，请稍候…</div>
     <div id="error-state" class="error-state" hidden>获取交易数据失败，请稍后重试。</div>
 
-    <footer>数据来源于 NOF1 公共 API · 页面每 30 秒自动刷新</footer>
+    <footer>
+      数据来源于 NOF1 公共 API · 页面每 30 秒自动刷新
+      <span>数量以绝对值显示，方向以多/空标识呈现。</span>
+    </footer>
   </main>
 
   <script>
@@ -225,6 +353,19 @@
     const errorStateEl = document.getElementById("error-state");
     const lastUpdatedEl = document.getElementById("last-updated");
     const statusTextEl = document.getElementById("status-text");
+    const modelFiltersEl = document.getElementById("model-filters");
+    const symbolFiltersEl = document.getElementById("symbol-filters");
+    const resetFiltersBtn = document.getElementById("filter-reset");
+    const modelSummaryEl = document.getElementById("model-summary");
+    const symbolSummaryEl = document.getElementById("symbol-summary");
+
+    const state = {
+      trades: [],
+      filters: {
+        model: "all",
+        symbol: "all",
+      },
+    };
 
     const timeFormatter = new Intl.DateTimeFormat(undefined, {
       hour: "2-digit",
@@ -246,7 +387,7 @@
         return "未知时间";
       }
       const date = new Date(value);
-      if (Number.isNaN(date)) {
+      if (Number.isNaN(date.getTime())) {
         return value;
       }
       return `${timeFormatter.format(date)} · ${dateFormatter.format(date)}`;
@@ -257,28 +398,110 @@
         return "—";
       }
       const fixed = Number(value);
+      if (Number.isNaN(fixed)) {
+        return "—";
+      }
       if (Math.abs(fixed) >= 1000) {
         return fixed.toLocaleString(undefined, { maximumFractionDigits: digits });
       }
       return fixed.toFixed(digits);
     }
 
-    function renderTrades(trades) {
+    function createChip(label, value, active, onSelect) {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = `filter-chip${active ? " active" : ""}`;
+      chip.textContent = label;
+      chip.addEventListener("click", () => onSelect(value));
+      return chip;
+    }
+
+    function renderFilterChips(container, items, activeValue, onSelect) {
+      container.innerHTML = "";
+      container.appendChild(createChip("全部", "all", activeValue === "all", onSelect));
+      items.forEach((value) => {
+        const label = value || "未命名";
+        container.appendChild(createChip(label, value, activeValue === value, onSelect));
+      });
+    }
+
+    function updateFilters() {
+      const models = Array.from(
+        new Set(state.trades.map((trade) => trade.model_id).filter(Boolean))
+      ).sort();
+      const symbols = Array.from(
+        new Set(state.trades.map((trade) => trade.symbol).filter(Boolean))
+      ).sort();
+
+      renderFilterChips(modelFiltersEl, models, state.filters.model, (value) => {
+        state.filters.model = value;
+        renderTrades();
+      });
+
+      renderFilterChips(symbolFiltersEl, symbols, state.filters.symbol, (value) => {
+        state.filters.symbol = value;
+        renderTrades();
+      });
+
+      updateSummaries(models, symbols);
+    }
+
+    function applyFilters(trades) {
+      return trades.filter((trade) => {
+        const modelMatch =
+          state.filters.model === "all" || trade.model_id === state.filters.model;
+        const symbolMatch =
+          state.filters.symbol === "all" || trade.symbol === state.filters.symbol;
+        return modelMatch && symbolMatch;
+      });
+    }
+
+    function updateSummaries(models, symbols) {
+      const modelLabel =
+        state.filters.model === "all"
+          ? `模型：全部 (${models.length || 0} 个)`
+          : `模型：${state.filters.model}`;
+      const symbolLabel =
+        state.filters.symbol === "all"
+          ? `币种：全部 (${symbols.length || 0} 个)`
+          : `币种：${state.filters.symbol}`;
+
+      modelSummaryEl.textContent = modelLabel;
+      symbolSummaryEl.textContent = symbolLabel;
+    }
+
+    function renderTrades() {
+      const filtered = applyFilters(state.trades);
       feedEl.innerHTML = "";
-      if (!trades || trades.length === 0) {
+
+      if (filtered.length === 0) {
         feedEl.hidden = true;
         emptyStateEl.hidden = false;
+        statusTextEl.textContent = "暂无数据";
         return;
       }
 
       feedEl.hidden = false;
       emptyStateEl.hidden = true;
 
-      trades.forEach((trade) => {
+      filtered.forEach((trade) => {
         const direction = (trade.side || "").toLowerCase();
         const sideLabel = direction === "long" ? "多" : direction === "short" ? "空" : "—";
+        const leverageDisplay =
+          typeof trade.leverage === "number"
+            ? `${formatNumber(trade.leverage, 2)}x`
+            : trade.raw_leverage || "—";
+        const quantityValue =
+          trade.quantity === null || trade.quantity === undefined
+            ? null
+            : Math.abs(Number(trade.quantity));
+        const pnlValue =
+          trade.realized_net_pnl === null || trade.realized_net_pnl === undefined
+            ? null
+            : Number(trade.realized_net_pnl);
+
         const card = document.createElement("article");
-        card.className = `trade-card`;
+        card.className = "trade-card";
         card.innerHTML = `
           <div class="trade-header">
             <span class="trade-time">${formatTime(trade.display_time)}</span>
@@ -288,11 +511,11 @@
           <div class="trade-meta">
             <div class="metric">
               <span>杠杆</span>
-              <strong>${trade.leverage ? formatNumber(trade.leverage, 1) + "x" : trade.raw_leverage || "—"}</strong>
+              <strong>${leverageDisplay}</strong>
             </div>
             <div class="metric">
-              <span>数量</span>
-              <strong>${formatNumber(trade.quantity, 3)}</strong>
+              <span>数量 (绝对值)</span>
+              <strong>${formatNumber(quantityValue, 4)}</strong>
             </div>
             <div class="metric">
               <span>开仓价格</span>
@@ -307,13 +530,15 @@
               <strong>${formatNumber(trade.stop_loss, 4)}</strong>
             </div>
             <div class="metric">
-              <span>浮动盈亏</span>
-              <strong>${formatNumber(trade.realized_net_pnl, 2)}</strong>
+              <span>已实现净盈亏</span>
+              <strong>${formatNumber(pnlValue, 2)}</strong>
             </div>
           </div>
         `;
         feedEl.appendChild(card);
       });
+
+      statusTextEl.textContent = `筛选后 ${filtered.length} 条`;
     }
 
     async function fetchTrades() {
@@ -324,17 +549,25 @@
           throw new Error(`HTTP ${response.status}`);
         }
         const data = await response.json();
-        renderTrades(data.trades);
+        state.trades = Array.isArray(data.trades) ? data.trades : [];
+        updateFilters();
+        renderTrades();
         lastUpdatedEl.textContent = formatTime(data.fetched_at);
-        statusTextEl.textContent = `最新 ${data.count} 条`;
         errorStateEl.hidden = true;
       } catch (error) {
         console.error("Failed to fetch trades", error);
-        errorStateEl.textContent = `获取交易数据失败：${error.message || error}`;
         statusTextEl.textContent = "错误";
+        errorStateEl.textContent = `获取交易数据失败：${error.message || error}`;
         errorStateEl.hidden = false;
       }
     }
+
+    resetFiltersBtn.addEventListener("click", () => {
+      state.filters.model = "all";
+      state.filters.symbol = "all";
+      updateFilters();
+      renderTrades();
+    });
 
     fetchTrades();
     setInterval(fetchTrades, POLL_INTERVAL);

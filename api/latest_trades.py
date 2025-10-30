@@ -59,10 +59,49 @@ def _coerce_float(value: Any) -> float | None:
         return None
 
 
+def _ensure_iso8601(value: Any) -> str | None:
+    """Best-effort conversion to ISO-8601 (UTC)."""
+    if value is None:
+        return None
+
+    epoch_seconds: float | None = None
+
+    if isinstance(value, (int, float)):
+        epoch_seconds = float(value)
+    elif isinstance(value, str):
+        candidate = value.strip()
+        if not candidate:
+            return None
+        try:
+            # Numeric strings (seconds or milliseconds)
+            epoch_seconds = float(candidate)
+        except ValueError:
+            normalized = candidate.replace("Z", "+00:00")
+            normalized = normalized.replace(" ", "T", 1)
+            try:
+                dt_obj = datetime.fromisoformat(normalized)
+                if dt_obj.tzinfo is None:
+                    dt_obj = dt_obj.replace(tzinfo=timezone.utc)
+                return dt_obj.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+            except ValueError:
+                return candidate
+
+    if epoch_seconds is None:
+        return None
+
+    if epoch_seconds > 1e12:  # treat as milliseconds
+        epoch_seconds /= 1000.0
+
+    dt_obj = datetime.fromtimestamp(epoch_seconds, tz=timezone.utc)
+    return dt_obj.isoformat().replace("+00:00", "Z")
+
+
 def _normalize_trade(trade: Dict[str, Any]) -> Dict[str, Any]:
     """Extract the fields needed by the frontend and normalise names."""
-    entry_time = trade.get("entry_time") or trade.get("entry_human_time")
-    exit_time = trade.get("exit_time") or trade.get("exit_human_time")
+    entry_time_raw = trade.get("entry_time") or trade.get("entry_human_time")
+    exit_time_raw = trade.get("exit_time") or trade.get("exit_human_time")
+    entry_time = _ensure_iso8601(entry_time_raw)
+    exit_time = _ensure_iso8601(exit_time_raw)
     leverage = trade.get("leverage")
     leverage_value = _coerce_float(leverage)
 
