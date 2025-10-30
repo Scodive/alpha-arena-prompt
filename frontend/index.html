@@ -7,98 +7,252 @@
   <style>
     :root {
       color-scheme: light;
-      font-family: "Inter", "HarmonyOS Sans", "PingFang SC", "Microsoft YaHei", system-ui,
-        -apple-system, sans-serif;
-      background-color: #eef2f8;
-      color: #0f1b31;
+      font-family: "Space Grotesk", "Inter", "HarmonyOS Sans", "PingFang SC", "Microsoft YaHei",
+        system-ui, -apple-system, sans-serif;
+      background-color: #f7f5f1;
+      color: #14110f;
+    }
+
+    * {
+      box-sizing: border-box;
     }
 
     body {
       margin: 0;
-      padding: 2.6rem 1rem 4rem;
-      display: flex;
-      justify-content: center;
-      background: radial-gradient(
-        140% 120% at 50% 0%,
-        rgba(102, 153, 255, 0.18),
-        rgba(238, 242, 248, 0.96) 68%
-      );
+      min-height: 100vh;
+      background: #f8f6f2;
     }
 
-    main {
-      width: min(1080px, 100%);
-      display: flex;
-      flex-direction: column;
-      gap: 1.8rem;
+    a {
+      color: inherit;
     }
 
-    header {
+    .page {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 1.8rem 1.2rem 3rem;
       display: flex;
       flex-direction: column;
-      gap: 0.55rem;
+      gap: 1.6rem;
     }
 
-    header h1 {
-      margin: 0;
-      font-size: clamp(1.6rem, 2.4vw + 1rem, 2.7rem);
+    header.brand-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding-bottom: 0.8rem;
+      border-bottom: 2px solid #14110f;
+    }
+
+    .brand-logo {
+      font-size: 1.6rem;
       font-weight: 700;
-      letter-spacing: 0.05rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
     }
 
-    header p {
-      margin: 0;
-      color: #5a6787;
-      font-size: 0.96rem;
+    .brand-logo span {
+      font-weight: 400;
     }
 
-    .status-bar {
+    .brand-nav {
       display: flex;
-      flex-wrap: wrap;
-      gap: 0.75rem;
-      font-size: 0.85rem;
-      color: #5b6a7f;
-    }
-
-    .status-chip {
-      padding: 0.36rem 0.85rem;
-      border-radius: 999px;
-      background: #ffffff;
-      border: 1px solid #dbe4f4;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.45rem;
-      box-shadow: 0 6px 18px rgba(111, 137, 212, 0.12);
-    }
-
-    .status-chip strong {
-      font-weight: 600;
-      color: #1f2f47;
-    }
-
-    .filters {
-      display: flex;
-      flex-wrap: wrap;
       gap: 1.2rem;
-      align-items: center;
-      background: rgba(255, 255, 255, 0.88);
-      padding: 1rem 1.25rem;
-      border-radius: 16px;
-      border: 1px solid rgba(204, 214, 235, 0.9);
-      box-shadow: 0 14px 32px rgba(41, 72, 159, 0.08);
+      font-size: 0.92rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
     }
 
-    .filter-group {
+    .brand-nav span {
+      opacity: 0.65;
+    }
+
+    .ticker-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.8rem;
+      background: #ffffff;
+      border: 2px solid #14110f;
+      box-shadow: 6px 6px 0 #14110f;
+      padding: 0.75rem 1rem;
+    }
+
+    .stat-chip {
+      display: grid;
+      grid-template-columns: auto auto;
+      column-gap: 0.4rem;
+      row-gap: 0.1rem;
+      align-items: baseline;
+      padding: 0.35rem 0.8rem;
+      background: #f1efe9;
+      border: 1px solid #14110f;
+      border-radius: 6px;
+      font-size: 0.86rem;
+      min-width: 160px;
+    }
+
+    .stat-chip span {
+      font-weight: 600;
+      letter-spacing: 0.04em;
+    }
+
+    #notification {
+      padding: 0.65rem 1rem;
+      border-radius: 10px;
+      border: 1px solid #14110f;
+      background: #fff9d6;
+      box-shadow: 4px 4px 0 #14110f;
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
+
+    #notification strong {
+      color: #d9480f;
+    }
+
+    #notification[hidden] {
+      display: none;
+    }
+
+    main.dashboard {
+      display: flex;
+      flex-direction: column;
+      gap: 1.4rem;
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 1.4rem;
+    }
+
+    .card {
+      border: 2px solid #14110f;
+      background: #ffffff;
+      box-shadow: 6px 6px 0 #14110f;
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card h2 {
+      margin: 0;
+      padding: 0.85rem 1.1rem;
+      font-size: 1rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border-bottom: 1px solid #14110f;
+      background: #f4f1ea;
+    }
+
+    .chart-placeholder {
+      flex: 1;
+      padding: 1.5rem 1.2rem;
+      background: repeating-linear-gradient(
+          90deg,
+          rgba(20, 17, 15, 0.08),
+          rgba(20, 17, 15, 0.08) 1px,
+          transparent 1px,
+          transparent 32px
+        ),
+        repeating-linear-gradient(
+          0deg,
+          rgba(20, 17, 15, 0.08),
+          rgba(20, 17, 15, 0.08) 1px,
+          transparent 1px,
+          transparent 32px
+        );
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 0.8rem;
+      text-align: center;
+      color: #5b554d;
+      font-size: 0.92rem;
+    }
+
+    .chart-placeholder .badge {
+      padding: 0.3rem 0.8rem;
+      border-radius: 999px;
+      border: 1px solid #14110f;
+      background: #fff;
+      font-size: 0.78rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .summary-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      padding: 1.1rem;
+    }
+
+    .summary-item {
+      border-left: 4px solid #14110f;
+      padding: 0.2rem 0 0.2rem 0.8rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .summary-item header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.4rem;
+    }
+
+    .summary-item header strong {
+      font-size: 0.98rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .summary-stats {
+      font-size: 0.82rem;
+      color: #4e4940;
+      display: flex;
+      gap: 1.2rem;
+      flex-wrap: wrap;
+    }
+
+    .summary-stats span {
+      font-weight: 600;
+    }
+
+    .summary-empty {
+      font-size: 0.86rem;
+      color: #6b645a;
+    }
+
+    .filters-panel {
+      border: 2px solid #14110f;
+      background: #ffffff;
+      box-shadow: 6px 6px 0 #14110f;
+      border-radius: 12px;
+      padding: 0.85rem 1.1rem 1rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    .filters-panel .group {
       display: flex;
       flex-direction: column;
       gap: 0.55rem;
-      min-width: 200px;
+      min-width: 220px;
     }
 
-    .filter-group > span {
+    .filters-panel label {
       font-size: 0.8rem;
       text-transform: uppercase;
-      letter-spacing: 0.12rem;
-      color: #6c7da0;
+      letter-spacing: 0.12em;
+      color: #504a41;
     }
 
     .filter-chips {
@@ -108,271 +262,277 @@
     }
 
     .filter-chip {
-      border: 1px solid #ccd5ed;
-      background: #f6f8fc;
-      color: #22324d;
-      padding: 0.36rem 0.9rem;
+      border: 1px solid #14110f;
       border-radius: 999px;
-      font-size: 0.83rem;
-      font-weight: 500;
+      padding: 0.35rem 0.9rem;
+      font-size: 0.82rem;
+      background: #f6f2e9;
       cursor: pointer;
-      transition: all 0.16s ease-in-out;
+      transition: transform 0.12s ease;
     }
 
     .filter-chip:hover {
-      border-color: #5b7ffa;
-      color: #1b2d5a;
+      transform: translateY(-1px);
     }
 
     .filter-chip.active {
-      background: linear-gradient(120deg, #4f7df8, #6dd5f7);
-      border-color: transparent;
-      color: #fff;
-      box-shadow: 0 12px 26px rgba(79, 125, 248, 0.28);
+      background: #14110f;
+      color: #ffffff;
     }
 
-    .filter-actions {
-      display: flex;
-      align-items: center;
-      gap: 0.8rem;
-      margin-left: auto;
-    }
-
-    .filter-actions button {
-      padding: 0.48rem 1.05rem;
-      border-radius: 999px;
-      border: none;
-      background: #ecf2ff;
-      color: #1f3d7a;
+    .filters-panel button {
+      border: 1px solid #14110f;
+      background: #ffffff;
+      padding: 0.45rem 0.95rem;
+      border-radius: 8px;
       font-weight: 600;
       cursor: pointer;
-      transition: background 0.16s ease, color 0.16s ease;
+      transition: background 0.12s ease;
     }
 
-    .filter-actions button:hover {
-      background: #dce6ff;
-      color: #182b5d;
+    .filters-panel button:hover {
+      background: #14110f;
+      color: #ffffff;
     }
 
-    .filter-summary {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1rem;
-      font-size: 0.84rem;
-      color: #5a6b87;
-    }
-
-    .feed {
+    .feed-panel {
+      border: 2px solid #14110f;
+      background: #ffffff;
+      box-shadow: 6px 6px 0 #14110f;
+      border-radius: 12px;
       display: flex;
       flex-direction: column;
-      gap: 1.2rem;
     }
 
-    .trade-card {
-      padding: 1.25rem 1.45rem 1.2rem;
-      border-radius: 18px;
-      background: rgba(255, 255, 255, 0.96);
-      border: 1px solid rgba(210, 220, 240, 0.85);
-      box-shadow: 0 18px 52px rgba(61, 92, 167, 0.16);
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-    }
-
-    .trade-header {
+    .feed-header {
       display: flex;
       justify-content: space-between;
       align-items: baseline;
-      gap: 0.8rem;
+      padding: 0.95rem 1.15rem;
+      border-bottom: 1px solid #14110f;
+      background: #f4f1ea;
     }
 
-    .trade-time {
-      font-size: 0.95rem;
-      font-weight: 600;
-      color: #324467;
-      letter-spacing: 0.05rem;
+    .feed-header h2 {
+      margin: 0;
+      font-size: 1rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .feed-meta {
+      display: flex;
+      gap: 1rem;
+      font-size: 0.82rem;
+      letter-spacing: 0.05em;
+      color: #524c42;
+    }
+
+    .feed-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      padding: 1.1rem 1.15rem 1.4rem;
+    }
+
+    .trade-card {
+      border: 1px solid #14110f;
+      border-left-width: 8px;
+      border-radius: 12px;
+      padding: 1rem 1.1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      background: #fffdf8;
+    }
+
+    .trade-top {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      font-size: 0.88rem;
+      letter-spacing: 0.04em;
+    }
+
+    .trade-top strong {
+      text-transform: uppercase;
+      font-size: 0.92rem;
     }
 
     .trade-status {
       display: inline-flex;
       align-items: center;
-      gap: 0.3rem;
-      padding: 0.2rem 0.7rem;
+      gap: 0.35rem;
+      padding: 0.2rem 0.55rem;
       border-radius: 999px;
-      font-size: 0.78rem;
-      font-weight: 600;
-      letter-spacing: 0.08rem;
+      border: 1px solid #14110f;
+      font-size: 0.72rem;
+      letter-spacing: 0.12em;
       text-transform: uppercase;
-      border: 1px solid transparent;
     }
 
     .trade-status.open {
-      color: #155a35;
-      background: rgba(31, 184, 120, 0.12);
-      border-color: rgba(31, 184, 120, 0.4);
+      background: #d4f6e6;
+      color: #14583e;
     }
 
     .trade-status.closed {
-      color: #5d6791;
-      background: rgba(152, 165, 213, 0.12);
-      border-color: rgba(152, 165, 213, 0.35);
+      background: #e7e4ff;
+      color: #2d2f73;
     }
 
-    .trade-side {
-      padding: 0.22rem 0.85rem;
-      border-radius: 999px;
-      font-size: 0.82rem;
-      font-weight: 600;
-      letter-spacing: 0.08rem;
-      text-transform: uppercase;
-      border: 1px solid transparent;
-    }
-
-    .trade-side.long {
-      color: #10624b;
-      background: rgba(24, 182, 138, 0.14);
-      border-color: rgba(24, 182, 138, 0.4);
-    }
-
-    .trade-side.short {
-      color: #a31f3f;
-      background: rgba(246, 118, 146, 0.16);
-      border-color: rgba(246, 118, 146, 0.42);
-    }
-
-    .trade-headline {
-      font-size: 1.12rem;
-      letter-spacing: 0.04rem;
-      color: #142744;
-      font-weight: 600;
-    }
-
-    .trade-meta {
+    .trade-body {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 1rem;
-      font-size: 0.9rem;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 0.8rem;
+      font-size: 0.84rem;
     }
 
-    .metric {
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-      color: #586680;
-    }
-
-    .metric span {
+    .trade-metric span {
+      display: block;
       font-size: 0.72rem;
-      letter-spacing: 0.1rem;
       text-transform: uppercase;
-      color: #8897b4;
+      letter-spacing: 0.12em;
+      color: #615a50;
+      margin-bottom: 0.2rem;
     }
 
-    .metric strong {
-      font-weight: 600;
-      color: #111f35;
+    .trade-metric strong {
+      font-size: 0.92rem;
+    }
+
+    .pnl-positive {
+      color: #008444;
+    }
+
+    .pnl-negative {
+      color: #d92d20;
     }
 
     .empty-state,
     .error-state {
+      border: 1px dashed #14110f;
+      background: #fff8e6;
+      border-radius: 10px;
+      padding: 1.6rem 1rem;
+      margin: 0 1.2rem 1.2rem;
       text-align: center;
-      padding: 2.4rem 1.2rem;
-      border-radius: 18px;
-      border: 1px dashed rgba(156, 176, 211, 0.6);
-      background: rgba(255, 255, 255, 0.7);
-      color: #667499;
-      font-size: 0.95rem;
-      line-height: 1.5;
+      color: #5c564d;
+      font-size: 0.9rem;
     }
 
     footer {
-      margin-top: 0.4rem;
+      text-align: center;
       font-size: 0.78rem;
-      color: #627091;
-      text-align: right;
+      color: #6c665d;
+      letter-spacing: 0.04em;
     }
 
     footer span {
       display: block;
       margin-top: 0.2rem;
-      color: #8795b0;
     }
 
-    @media (max-width: 720px) {
-      body {
-        padding: 2rem 0.9rem 3rem;
+    @media (max-width: 960px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .page {
+        padding: 1.4rem 0.8rem 2.4rem;
       }
 
-      .filters {
+      header.brand-bar {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .brand-nav {
+        flex-wrap: wrap;
+        gap: 0.6rem;
+      }
+
+      .filters-panel {
         flex-direction: column;
         align-items: stretch;
-      }
-
-      .filter-actions {
-        margin-left: 0;
-        justify-content: flex-start;
-      }
-
-      .trade-meta {
-        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
       }
     }
   </style>
 </head>
 <body>
-  <main>
-    <header>
-      <h1>Alpha Arena 实时交易播报</h1>
-      <p>最新交易快讯，按时间倒序自动更新，适配 Vercel 部署。</p>
-      <div class="status-bar">
-        <div class="status-chip">
-          <span>最后更新</span>
-          <strong id="last-updated">—</strong>
-        </div>
-        <div class="status-chip">
-          <span>刷新间隔</span>
-          <strong>30 秒</strong>
-        </div>
-        <div class="status-chip">
-          <span>状态</span>
-          <strong id="status-text">准备中…</strong>
-        </div>
-      </div>
+  <div class="page">
+    <header class="brand-bar">
+      <div class="brand-logo">Alpha Arena <span>实时播报</span></div>
+      <nav class="brand-nav">
+        <span>Live</span>
+        <span>Leaderboard</span>
+        <span>Models</span>
+        <span>Prompts</span>
+      </nav>
     </header>
 
-    <section class="filters">
-      <div class="filter-group">
-        <span>模型</span>
-        <div class="filter-chips" id="model-filters"></div>
-      </div>
-      <div class="filter-group">
-        <span>币种</span>
-        <div class="filter-chips" id="symbol-filters"></div>
-      </div>
-      <div class="filter-actions">
+    <section id="stats-bar" class="ticker-bar"></section>
+    <div id="notification" hidden></div>
+
+    <main class="dashboard">
+      <section class="dashboard-grid">
+        <article class="card">
+          <h2>总账户价值趋势</h2>
+          <div class="chart-placeholder">
+            <div class="badge">视觉预留</div>
+            <p>图表数据尚未接入，当前展示最新交易与持仓动态。</p>
+          </div>
+        </article>
+        <article class="card">
+          <h2>模型概览</h2>
+          <div id="summary-grid" class="summary-grid">
+            <div class="summary-empty">暂无数据，等待最新交易载入…</div>
+          </div>
+        </article>
+      </section>
+
+      <section class="filters-panel">
+        <div class="group">
+          <label>模型筛选</label>
+          <div class="filter-chips" id="model-filters"></div>
+        </div>
+        <div class="group">
+          <label>币种筛选</label>
+          <div class="filter-chips" id="symbol-filters"></div>
+        </div>
         <button id="filter-reset" type="button">重置筛选</button>
-      </div>
-    </section>
+      </section>
 
-    <div class="filter-summary">
-      <span id="model-summary"></span>
-      <span id="symbol-summary"></span>
-    </div>
+      <section class="feed-panel">
+        <div class="feed-header">
+          <h2>实时交易播报</h2>
+          <div class="feed-meta">
+            <span id="status-text">准备中…</span>
+            <span id="last-updated">—</span>
+          </div>
+        </div>
 
-    <section id="feed" class="feed" aria-live="polite"></section>
-    <div id="empty-state" class="empty-state" hidden>暂无交易数据，请稍候…</div>
-    <div id="error-state" class="error-state" hidden>获取交易数据失败，请稍后重试。</div>
+        <div id="feed" class="feed-list"></div>
+        <div id="empty-state" class="empty-state" hidden>暂无交易数据，请稍候…</div>
+        <div id="error-state" class="error-state" hidden>获取交易数据失败，请稍后重试。</div>
+      </section>
+    </main>
 
     <footer>
       数据来源于 NOF1 公共 API · 页面每 30 秒自动刷新
-      <span>进行中条目展示未实现盈亏，已结束条目展示已实现盈亏；数量同时保留符号与绝对值。</span>
+      <span>进行中条目展示未实现盈亏，已结束条目展示已实现盈亏；数量保留符号与绝对值。</span>
     </footer>
-  </main>
+  </div>
 
   <script>
     const API_URL = "/api/latest_trades";
     const POLL_INTERVAL = 30_000;
 
+    const statsBarEl = document.getElementById("stats-bar");
+    const notificationEl = document.getElementById("notification");
     const feedEl = document.getElementById("feed");
     const emptyStateEl = document.getElementById("empty-state");
     const errorStateEl = document.getElementById("error-state");
@@ -383,16 +543,51 @@
     const resetFiltersBtn = document.getElementById("filter-reset");
     const modelSummaryEl = document.getElementById("model-summary");
     const symbolSummaryEl = document.getElementById("symbol-summary");
+    const summaryGridEl = document.getElementById("summary-grid");
 
-const state = {
-  trades: [],
-  filters: {
-    model: "all",
-    symbol: "all",
-  },
-  availableModels: [],
-  availableSymbols: [],
-};
+    let notificationTimer;
+
+    const state = {
+      trades: [],
+      filters: {
+        model: "all",
+        symbol: "all",
+      },
+      availableModels: [],
+      availableSymbols: [],
+      seenEvents: new Set(),
+      isInitialized: false,
+      lastSummary: {
+        count: 0,
+        open: 0,
+        closed: 0,
+      },
+    };
+
+    const MODEL_COLORS = {
+      "gpt-5": "#0f62fe",
+      "grok-4": "#ff6f00",
+      "qwen3-max": "#6c2bd9",
+      "claude-sonnet": "#ff9b6a",
+      "gemini-2.5-pro": "#0070f3",
+      "gemini-2.5": "#0070f3",
+      "deepseek-chat": "#2d8d52",
+      "claude": "#ff9b6a",
+    };
+
+    function hashColor(value) {
+      let hash = 0;
+      for (let i = 0; i < value.length; i += 1) {
+        hash = value.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      const hue = Math.abs(hash) % 360;
+      return `hsl(${hue}, 65%, 50%)`;
+    }
+
+    function colorForModel(model) {
+      if (!model) return "#14110f";
+      return MODEL_COLORS[model] || hashColor(model);
+    }
 
     const timeFormatter = new Intl.DateTimeFormat(undefined, {
       hour: "2-digit",
@@ -409,25 +604,31 @@ const state = {
       second: "2-digit",
     });
 
-function formatTime(value) {
-  if (!value) {
-    return null;
-  }
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return null;
-  }
-  return `${timeFormatter.format(date)} · ${dateFormatter.format(date)}`;
-}
+    const currencyFormatter = new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 2,
+    });
 
-function renderTime(trade) {
-  const human = trade.entry_human_time || trade.exit_human_time;
-  const iso = formatTime(trade.display_time);
-  if (human && iso) {
-    return `${human}（${iso}）`;
-  }
-  return human || iso || "未知时间";
-}
+    function formatTime(value) {
+      if (!value) {
+        return null;
+      }
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) {
+        return null;
+      }
+      return `${timeFormatter.format(date)} · ${dateFormatter.format(date)}`;
+    }
+
+    function renderTime(trade) {
+      const human = trade.entry_human_time || trade.exit_human_time;
+      const iso = formatTime(trade.display_time);
+      if (human && iso) {
+        return `${human}（${iso}）`;
+      }
+      return human || iso || "未知时间";
+    }
 
     function formatNumber(value, digits = 2) {
       if (value === null || value === undefined || Number.isNaN(value)) {
@@ -461,15 +662,15 @@ function renderTime(trade) {
       });
     }
 
-function updateFilters() {
-  const models =
-    state.availableModels.length > 0
-      ? state.availableModels
-      : Array.from(new Set(state.trades.map((trade) => trade.model_id).filter(Boolean))).sort();
-  const symbols =
-    state.availableSymbols.length > 0
-      ? state.availableSymbols
-      : Array.from(new Set(state.trades.map((trade) => trade.symbol).filter(Boolean))).sort();
+    function updateFilters() {
+      const models =
+        state.availableModels.length > 0
+          ? state.availableModels
+          : Array.from(new Set(state.trades.map((trade) => trade.model_id).filter(Boolean))).sort();
+      const symbols =
+        state.availableSymbols.length > 0
+          ? state.availableSymbols
+          : Array.from(new Set(state.trades.map((trade) => trade.symbol).filter(Boolean))).sort();
 
       renderFilterChips(modelFiltersEl, models, state.filters.model, (value) => {
         state.filters.model = value;
@@ -504,8 +705,147 @@ function updateFilters() {
           ? `币种：全部 (${symbols.length || 0} 个)`
           : `币种：${state.filters.symbol}`;
 
-      modelSummaryEl.textContent = modelLabel;
-      symbolSummaryEl.textContent = symbolLabel;
+      if (modelSummaryEl) modelSummaryEl.textContent = modelLabel;
+      if (symbolSummaryEl) symbolSummaryEl.textContent = symbolLabel;
+    }
+
+    function describeSide(side) {
+      const lower = (side || "").toLowerCase();
+      if (lower === "long") return "多";
+      if (lower === "short") return "空";
+      return "";
+    }
+
+    function describeAlert(trade) {
+      const model = trade.model_id || "未知模型";
+      const symbol = trade.symbol || "未知品种";
+      const side = describeSide(trade.side);
+      const action = trade.status === "open" ? "开仓" : "平仓";
+      const sideLabel = side ? `（${side}）` : "";
+      return `${model} ${action} ${symbol}${sideLabel}`;
+    }
+
+    function showNotification(messages) {
+      if (!messages.length) {
+        return;
+      }
+      notificationEl.innerHTML = messages
+        .map((msg) => `<div><strong>提醒：</strong>${msg}</div>`)
+        .join("");
+      notificationEl.hidden = false;
+      if (notificationTimer) {
+        clearTimeout(notificationTimer);
+      }
+      notificationTimer = setTimeout(() => {
+        notificationEl.hidden = true;
+        notificationEl.innerHTML = "";
+      }, 8000);
+    }
+
+    function processNotifications(trades) {
+      if (!Array.isArray(trades) || trades.length === 0) {
+        return;
+      }
+      if (!state.isInitialized) {
+        trades.forEach((trade) => {
+          if (!trade.id) return;
+          const key = `${trade.id}|${trade.status}`;
+          state.seenEvents.add(key);
+        });
+        state.isInitialized = true;
+        return;
+      }
+
+      const newMessages = [];
+      trades.forEach((trade) => {
+        if (!trade.id) {
+          return;
+        }
+        const key = `${trade.id}|${trade.status}`;
+        if (state.seenEvents.has(key)) {
+          return;
+        }
+        state.seenEvents.add(key);
+        if (trade.status === "open" || trade.status === "closed") {
+          newMessages.push(describeAlert(trade));
+        }
+      });
+
+      if (newMessages.length) {
+        showNotification(newMessages);
+      }
+    }
+
+    function renderStatsBar() {
+      const stats = state.lastSummary;
+      const total = stats.count || state.trades.length;
+      const open = stats.open ?? state.trades.filter((item) => item.status === "open").length;
+      const closed =
+        stats.closed ?? state.trades.filter((item) => item.status !== "open").length;
+
+      statsBarEl.innerHTML = `
+        <div class="stat-chip">
+          <span>总记录</span>
+          <div>${total}</div>
+        </div>
+        <div class="stat-chip">
+          <span>进行中</span>
+          <div>${open}</div>
+        </div>
+        <div class="stat-chip">
+          <span>已结束</span>
+          <div>${closed}</div>
+        </div>
+      `;
+    }
+
+    function buildModelStats(trades) {
+      const map = new Map();
+      trades.forEach((trade) => {
+        const model = trade.model_id || "未知模型";
+        const entry = map.get(model) || { model, open: 0, closed: 0, pnl: 0 };
+        if (trade.status === "open") {
+          entry.open += 1;
+        } else {
+          entry.closed += 1;
+        }
+        const pnlCandidate =
+          trade.status === "open" ? trade.unrealized_pnl : trade.realized_net_pnl;
+        const pnl = Number(pnlCandidate);
+        if (!Number.isNaN(pnl)) {
+          entry.pnl += pnl;
+        }
+        map.set(model, entry);
+      });
+      return Array.from(map.values()).sort((a, b) => b.open - a.open || b.closed - a.closed);
+    }
+
+    function renderSummary() {
+      const stats = buildModelStats(state.trades);
+      summaryGridEl.innerHTML = "";
+      if (!stats.length) {
+        summaryGridEl.innerHTML =
+          '<div class="summary-empty">暂无数据，等待最新交易载入…</div>';
+        return;
+      }
+
+      stats.slice(0, 6).forEach((item) => {
+        const color = colorForModel(item.model);
+        const pnlClass = item.pnl >= 0 ? "pnl-positive" : "pnl-negative";
+        const pnlText = currencyFormatter.format(item.pnl);
+        summaryGridEl.innerHTML += `
+          <article class="summary-item" style="border-color:${color}">
+            <header>
+              <strong>${item.model}</strong>
+              <span class="${pnlClass}">${pnlText}</span>
+            </header>
+            <div class="summary-stats">
+              <span>进行中：${item.open}</span>
+              <span>已结束：${item.closed}</span>
+            </div>
+          </article>
+        `;
+      });
     }
 
     function renderTrades() {
@@ -543,57 +883,68 @@ function updateFilters() {
         const pnlLabel = isOpen ? "未实现盈亏" : "已实现净盈亏";
         const pnlRaw = isOpen ? trade.unrealized_pnl : trade.realized_net_pnl;
         const pnlValue = pnlRaw === null || pnlRaw === undefined ? null : Number(pnlRaw);
+        const pnlClass =
+          pnlValue === null ? "" : pnlValue >= 0 ? "pnl-positive" : "pnl-negative";
+        const modelColor = colorForModel(trade.model_id);
 
         const card = document.createElement("article");
         card.className = "trade-card";
+        card.style.borderLeftColor = modelColor;
         card.innerHTML = `
-          <div class="trade-header">
+          <div class="trade-top">
             <div>
-              <span class="trade-time">${renderTime(trade)}</span>
+              <strong>${trade.model_id ?? "未知模型"}</strong>
+              <span> · ${trade.symbol ?? "未知品种"}</span>
+            </div>
+            <div>
               <span class="trade-status ${statusClass}">${statusLabel}</span>
             </div>
-            <span class="trade-side ${direction}">${sideLabel}</span>
           </div>
-          <div class="trade-headline">${trade.symbol ?? "未知品种"} · ${trade.model_id ?? "未知模型"}</div>
-          <div class="trade-meta">
-            <div class="metric">
+          <div class="trade-top">
+            <div>${renderTime(trade)}</div>
+            <div>方向：${sideLabel}</div>
+          </div>
+          <div class="trade-body">
+            <div class="trade-metric">
               <span>杠杆</span>
               <strong>${leverageDisplay}</strong>
             </div>
-            <div class="metric">
+            <div class="trade-metric">
               <span>数量</span>
               <strong>${formatNumber(quantitySigned, 4)}</strong>
             </div>
-            <div class="metric">
+            <div class="trade-metric">
               <span>数量绝对值</span>
               <strong>${formatNumber(quantityAbs, 4)}</strong>
             </div>
-            <div class="metric">
+            <div class="trade-metric">
               <span>开仓价格</span>
               <strong>${formatNumber(trade.entry_price, 4)}</strong>
             </div>
-            <div class="metric">
+            <div class="trade-metric">
               <span>${priceLabel}</span>
               <strong>${formatNumber(priceValue, 4)}</strong>
             </div>
-            <div class="metric">
+            <div class="trade-metric">
               <span>止盈价格</span>
               <strong>${formatNumber(trade.profit_target ?? trade.exit_price, 4)}</strong>
             </div>
-            <div class="metric">
+            <div class="trade-metric">
               <span>止损</span>
               <strong>${formatNumber(trade.stop_loss, 4)}</strong>
             </div>
-            <div class="metric">
+            <div class="trade-metric">
               <span>${pnlLabel}</span>
-              <strong>${formatNumber(pnlValue, 2)}</strong>
+              <strong class="${pnlClass}">${formatNumber(pnlValue, 2)}</strong>
             </div>
           </div>
         `;
         feedEl.appendChild(card);
       });
 
-      statusTextEl.textContent = `筛选后 ${filtered.length} 条 · 进行中 ${openFiltered} 条`;
+      const totalCount = state.lastSummary.count || state.trades.length;
+      const totalOpen = state.lastSummary.open ?? state.trades.filter((item) => item.status === "open").length;
+      statusTextEl.textContent = `筛选后 ${filtered.length} 条 · 进行中 ${openFiltered} 条 · 总计 ${totalCount} 条（实时持仓 ${totalOpen} 条）`;
     }
 
     async function fetchTrades() {
@@ -603,10 +954,28 @@ function updateFilters() {
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`);
         }
+
         const data = await response.json();
-        state.trades = Array.isArray(data.trades) ? data.trades : [];
+        const trades = Array.isArray(data.trades) ? data.trades : [];
+        state.trades = trades;
         state.availableModels = Array.isArray(data.models) ? data.models : [];
         state.availableSymbols = Array.isArray(data.symbols) ? data.symbols : [];
+        const totalCount = Number(data.count);
+        const openCount = Number(data.open_count);
+        const closedCount = Number(data.closed_count);
+        state.lastSummary = {
+          count: Number.isFinite(totalCount) ? totalCount : trades.length,
+          open: Number.isFinite(openCount)
+            ? openCount
+            : trades.filter((item) => item.status === "open").length,
+          closed: Number.isFinite(closedCount)
+            ? closedCount
+            : trades.filter((item) => item.status !== "open").length,
+        };
+
+        processNotifications(trades);
+        renderStatsBar();
+        renderSummary();
         updateFilters();
         renderTrades();
         lastUpdatedEl.textContent = formatTime(data.fetched_at) || data.fetched_at || "—";
@@ -625,6 +994,11 @@ function updateFilters() {
       updateFilters();
       renderTrades();
     });
+
+    renderStatsBar();
+    renderSummary();
+    updateFilters();
+    renderTrades();
 
     fetchTrades();
     setInterval(fetchTrades, POLL_INTERVAL);

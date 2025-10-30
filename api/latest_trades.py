@@ -143,8 +143,15 @@ def _normalize_position(position: Dict[str, Any]) -> Dict[str, Any]:
     leverage_value = _coerce_float(leverage)
     exit_plan = position.get("exit_plan") or {}
 
+    identifier = (
+        position.get("position_id")
+        or position.get("id")
+        or position.get("entry_oid")
+        or f"{position.get('model_id')}-{position.get('symbol')}-{entry_time or entry_label or ''}"
+    )
+
     return {
-        "id": str(position.get("position_id") or position.get("id") or position.get("symbol") or ""),
+        "id": str(identifier),
         "model_id": position.get("model_id"),
         "symbol": position.get("symbol"),
         "side": position.get("side"),
@@ -181,6 +188,68 @@ def _sort_trades(trades: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return sorted(trades, key=sort_key, reverse=True)
 
 
+def _extract_positions_from_account_totals(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Extract position records nested beneath account totals payloads."""
+    positions: List[Dict[str, Any]] = []
+    entries = payload.get("accountTotals") or payload.get("accounts") or []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        model_id = entry.get("model_id") or entry.get("modelId") or entry.get("id")
+        positions_map = entry.get("positions")
+        if not isinstance(positions_map, dict):
+            continue
+        for symbol, pos in positions_map.items():
+            if not isinstance(pos, dict):
+                continue
+            pos_copy = pos.copy()
+            pos_copy.setdefault("symbol", symbol)
+            pos_copy.setdefault("model_id", model_id)
+            positions.append(pos_copy)
+    return positions
+
+
+def _collect_open_positions() -> List[Dict[str, Any]]:
+    """Fetch open positions from primary and fallback endpoints."""
+    errors: List[str] = []
+
+    try:
+        positions_payload = _fetch_json(f"/positions?limit={POSITIONS_LIMIT}")
+        positions_raw = (
+            positions_payload.get("positions")
+            or positions_payload.get("data")
+            or positions_payload
+        )
+        if isinstance(positions_raw, list):
+            normalised = [
+                _normalize_position(pos) for pos in positions_raw if isinstance(pos, dict)
+            ]
+            if normalised:
+                return _sort_trades(normalised)[: max(POSITIONS_LIMIT, 1)]
+        else:
+            errors.append("Unexpected /positions response shape")
+    except Exception as exc:  # pylint: disable=broad-except
+        errors.append(f"/positions -> {exc}")
+
+    try:
+        totals_payload = _fetch_json("/account-totals")
+        positions_raw = _extract_positions_from_account_totals(totals_payload)
+        if positions_raw:
+            normalised = [
+                _normalize_position(pos) for pos in positions_raw if isinstance(pos, dict)
+            ]
+            if normalised:
+                return _sort_trades(normalised)[: max(POSITIONS_LIMIT, 1)]
+        else:
+            errors.append("No positions found in /account-totals")
+    except Exception as exc:  # pylint: disable=broad-except
+        errors.append(f"/account-totals -> {exc}")
+
+    if errors:
+        print(f"[latest_trades] open position fetch issues -> {' | '.join(errors)}", flush=True)
+    return []
+
+
 class handler(BaseHTTPRequestHandler):
     """Vercel Python serverless handler implemented via BaseHTTPRequestHandler."""
 
@@ -209,25 +278,9 @@ class handler(BaseHTTPRequestHandler):
             sorted_trades = _sort_trades(filtered_trades)
             limited_trades = sorted_trades[: max(limit, 1)]
 
-            normalised_positions: List[Dict[str, Any]] = []
-            try:
-                positions_payload = _fetch_json(f"/positions?limit={POSITIONS_LIMIT}")
-                positions_raw = (
-                    positions_payload.get("positions")
-                    or positions_payload.get("data")
-                    or positions_payload
-                )
-                if isinstance(positions_raw, list):
-                    normalised_positions = [
-                        _normalize_position(pos) for pos in positions_raw if isinstance(pos, dict)
-                    ]
-                else:
-                    raise RuntimeError("Unexpected response shape from /positions")
-            except Exception as exc:  # pylint: disable=broad-except
-                print(f"[latest_trades] positions fetch failed -> {exc}", flush=True)
-                normalised_positions = []
+            open_positions = _collect_open_positions()
 
-            combined = limited_trades + normalised_positions
+            combined = limited_trades + open_positions
             combined_sorted = _sort_trades(combined)
 
             models = sorted({item["model_id"] for item in combined_sorted if item.get("model_id")})
